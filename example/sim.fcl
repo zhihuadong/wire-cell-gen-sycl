@@ -1,0 +1,77 @@
+process_name: wclssim
+
+# "Pgrapher" or "TbbFlow"
+#wc_engine: "Pgrapher"
+wc_engine: "TbbFlow"
+
+physics :{
+   producers: {
+      plopper : {
+        module_type : BlipMaker
+      }
+      tpcrawdecoder : {
+         module_type : WireCellToolkit
+         wcls_main: {
+            tool_type: WCLS
+            apps: [@local::wc_engine]
+
+            logsinks: ["stdout", "sim.log"]
+            loglevels: ["debug"]
+
+            plugins: ["WireCellPgraph","WireCellGen","WireCellGenSycl","WireCellSio","WireCellRoot","WireCellLarsoft","WireCellTbb",'WireCellImg',"WireCellHio"]
+
+            # needs to be found via your WIRECELL_PATH 
+            configs: ["sim.jsonnet"]
+
+
+            # Contract note: these exact "type:name" must be used to identify
+            # the configuration data structures for these components in the Jsonnet.
+
+            inputers: [
+              "wclsSimDepoSource:"
+              ]
+            outputers: [
+              # "wclsSimChannelSink:postdrift",
+              # "wclsFrameSaver:simdigits",
+              # "wclsFrameSaver:nfdigits",
+              # "wclsFrameSaver:spsignals",
+              # "wclsFrameSaver:spthresholds"
+            ]
+
+            # Make available parameters via Jsonnet's std.extVar()
+            params: {
+                # Set "data" vs. "sim".  The epoch below probably should follow suit.
+                reality: "data"
+               
+                # "Pgrapher" or "TbbFlow"
+                engine: @local::wc_engine
+            }
+         }
+      }
+   }
+   # p1 : [ plopper, tpcrawdecoder ]
+   p1 : [ tpcrawdecoder ]
+   outputFiles : []
+   
+   trigger_paths : [ p1 ]
+   end_paths: [ outputFiles ]
+}
+outputs: {
+   out: {
+      module_type: RootOutput
+      // fileName: "%ifb_wcsim.root"
+      fileName: "wcsim.root"
+
+      outputCommands :   [
+         // "drop *", "keep recob::Wires_*_*_*"
+         "keep *_*_*_*"
+         // "drop *_nfspl1_raw_*",
+         // "drop *_nfspl1_threshold_*",
+         // "drop *_nfspl1_wiener_*",
+         // "drop *_nfspl1_gauss_*",
+         // "drop *_wcNoiseFilter_*_*",
+         // "drop *_daq_*_*"
+      ]
+
+   }
+}
