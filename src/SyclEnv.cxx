@@ -54,13 +54,14 @@ bool inline GenSycl::SyclEnv::Init() {
      // Initialize device, queue and context
      if (!ctx_) {
         device_ = GenSycl::syclcommon::GetTargetDevice();
+
         queue_ = cl::sycl::queue(device_);
         ctx_ = new cl::sycl::context(queue_.get_context());
       } else {
         device_ = ctx_->get_devices()[0];
         queue_ = cl::sycl::queue(*ctx_, device_);
       }
-
+	     return true ;
 
 }
 

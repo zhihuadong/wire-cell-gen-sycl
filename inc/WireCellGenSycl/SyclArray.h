@@ -55,14 +55,14 @@ namespace WireCell {
 			    q_.memcpy(d_ptr , ptr_ , sz_* sizeof(T) ).wait() ;
 		    }
 		    void copy_from( T* s_ptr) {
-			    q_.memcpy( ptr_ ,(void * ) s_ptr, sz_* sizeof(T) ).wait() ;
+			    q_.memcpy( (void * )ptr_ ,(void * ) s_ptr, sz_* sizeof(T) ).wait() ;
 		    }
 		    void copy_from( void * s_ptr) {
 			    q_.memcpy( ptr_ ,  s_ptr, sz_* sizeof(T) ).wait() ;
 		    }
 		    T*  to_host() {
 			    T* ret = (T*) malloc( sizeof(T) * sz_) ;
-			    q_.memcpy( ret, ptr_,  sz_* sizeof(T) ).wait() ;
+			    q_.memcpy( (void *)ret, (void *)ptr_,  sz_* sizeof(T) ).wait() ;
 			    return ret ;
 		    }
 		    size_t extent( int i ) const  { 

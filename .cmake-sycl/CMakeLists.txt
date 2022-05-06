@@ -8,14 +8,15 @@ set(CMAKE_CXX_EXTENSIONS Off)
 file(GLOB all_files ${PROJECT_SOURCE_DIR}/../src/*.cxx)
 
 
-include_directories(SYSTEM $ENV{BOOST_INC})
 
 set(BOOST_ROOT $ENV{BOOST_DIR} )
-set(BOOST_INCLUDEDIR $ENV{BOOST_INC})
-set(BOOST_LIBRARYDIR $ENV{BOOST_LIB})
-set(Boost_USE_MULTITHREADED ON)
+#set(BOOST_INCLUDEDIR $ENV{BOOST_INC})
+#set(BOOST_LIBRARYDIR $ENV{BOOST_LIB})
 
 find_package(Boost REQUIRED COMPONENTS)
+include_directories(Boost_INCLUDE_DIRS})
+set(Boost_USE_MULTITHREADED ON)
+
 find_package(CUDA REQUIRED)
 
 string(APPEND CMAKE_CXX_FLAGS "-g -O3  -pedantic -Wall -fsycl -fsycl-targets=nvptx64-nvidia-cuda ")
@@ -37,4 +38,4 @@ set_target_properties(WireCellGenSycl
 target_link_directories(WireCellGenSycl PRIVATE  $ENV{JSONCPP_LIB} $ENV{WIRECELL_LIB} $ENV{ONEMKL_LIB})
 target_link_libraries(WireCellGenSycl PRIVATE  jsoncpp WireCellIface WireCellUtil onemkl Boost::headers ${CUDA_CUFFT_LIBRARIES})
 
-#add_subdirectory(test)
+add_subdirectory(test)

@@ -2,7 +2,9 @@
 
 ## prerequisites
  - Need to have access to a `Wire-Cell Toolkit` build and its dependencies.
- - Need to have access to a `SYCL` build.
+   Following variable need to be definned: 
+   WIRECELL_LIB EIGEN_INC JSONNET_INC JSONCPP_INC WIRECELL_INC 
+
  - Need to have sycl compiler installed  https://codeplay.com/solutions/oneapi/for-cuda/#getting-started
  - Need to have oneMKL Open Source Interface Library installed https://github.com/oneapi-src/oneMKL 
 
