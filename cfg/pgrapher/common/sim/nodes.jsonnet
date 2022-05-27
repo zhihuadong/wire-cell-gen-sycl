@@ -79,6 +79,7 @@ function(params, tools)
             tick: params.daq.tick,
             nsigma: 3,
             transform: 'transform_matrix', // transform_matrix, transform_vector
+            //transform: 'transform_vector', // transform_matrix, transform_vector
         },
     }, nin=1, nout=1, uses=[anode] + pirs),
 

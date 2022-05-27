@@ -14,7 +14,8 @@ namespace WireCell {
         {
             Index N0 = in.extent(0);
             //auto out = gen_1d_Array<array_xc>(N0, 0);
-            auto out = array_xc(N0, false);
+            //auto out = array_xc(N0, false);
+            auto out = array_xc(N0 );
             cufftHandle plan;
             cufftPlan1d(&plan, N0, CUFFT_R2C, 1);
             cufftExecR2C(plan, (cufftReal*) in.data(), (cufftComplex*) out.data());
@@ -25,7 +26,8 @@ namespace WireCell {
         inline array_xf idft(const array_xc& in)
         {
             Index N0 = in.extent(0);
-            auto out = gen_1d_Array<array_xf>(N0, 0);
+            //auto out = gen_1d_Array<array_xf>(N0, 0);
+            auto out = array_xf(N0);
             cufftHandle plan;
             cufftPlan1d(&plan, N0, CUFFT_C2R, 1);
             cufftExecC2R(plan, (cufftComplex*) in.data(), (cufftReal*) out.data());
@@ -40,7 +42,8 @@ namespace WireCell {
             std::cout << "WIRECELL_SYCLARRAY_CUDA" << std::endl;
             Index N0 = in.extent(0);
             Index N1 = in.extent(1);
-            auto out = array_xxc(N0, N1, false);
+            auto out = array_xxc(N0, N1);
+	    //std::cout<<"(N0,N1)="<<N0<<","<<N1<<std::endl ;
 
             cufftHandle plan;
 
@@ -96,7 +99,7 @@ namespace WireCell {
             Index N0 = in.extent(0);
             Index N1 = in.extent(1);
             //auto out = gen_2d_Array<array_xxc>(N0, N1, 0);
-            auto out = array_xxc(N0, N1, false);
+            auto out = array_xxc(N0, N1);
 
             cufftHandle plan;
 
@@ -150,7 +153,7 @@ namespace WireCell {
             Index N0 = in.extent(0);
             Index N1 = in.extent(1);
             //auto out = gen_2d_Array<array_xxc>(N0, N1, 0);
-            auto out = array_xxc(N0, N1, false);
+            auto out = array_xxc(N0, N1);
 
             cufftHandle plan;
 	    auto q = out.get_queue() ;
@@ -229,7 +232,8 @@ namespace WireCell {
         {
             Index N0 = in.extent(0);
             Index N1 = in.extent(1);
-            auto out = gen_2d_Array<array_xxf>(N0, N1, 0);
+            //auto out = gen_2d_Array<array_xxf>(N0, N1, 0);
+            auto out = array_xxf(N0, N1);
 
             cufftHandle plan;
 	    auto q = out.get_queue() ;

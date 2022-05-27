@@ -2,6 +2,8 @@
 #define GENSYCL_SYCLCOMMON_H_
 #include <CL/sycl.hpp>
 
+#define SYCL_TARGET_CUDA 
+
 namespace WireCell::GenSycl::syclcommon {
 
 #ifdef SYCL_TARGET_CUDA
@@ -42,6 +44,7 @@ class AMDSelector : public cl::sycl::device_selector {
 static inline cl::sycl::device GetTargetDevice() {
   cl::sycl::device dev;
 #if defined SYCL_TARGET_CUDA
+#warning sycl_cuda
   CUDASelector cuda_selector;
   try {
     dev = cl::sycl::device(cuda_selector);

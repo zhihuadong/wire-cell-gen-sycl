@@ -28,18 +28,22 @@ namespace WireCell {
 			    ptr_ = NULL ; 
 			    sz_ =0 ; 
 		    } 
-		    ~Array1D( ) { sycl::free( ptr_, q_ ) ; } ;
+		    //~Array1D( ) { sycl::free( ptr_, q_ ) ; } ;
+		    ~Array1D( ) {  } ;
 	            Array1D( T* ptr, size_t N ) {
 			ptr_ = ptr ;
 			sz_ = N ;
 
 		    }
+		    void reset(){ sycl::free(ptr_, q_) ; ptr_=NULL ; sz_=0 ;}; 
 		    Array1D ( size_t N , bool init = true ) {
 			q_ = GenSycl::SyclEnv::get_queue() ;
 			ptr_ = sycl::malloc_device<T> ( N, q_ ) ;   
 			if(init) {
 		            q_.memset(ptr_, 0 , N*sizeof(T) )  ;
 			}	
+			sz_ = N ;
+			std::cout<<"Array1D contsructor: size: "<< sz_ <<std::endl ;
 		    }
 		    T & operator[]  (size_t i) const { return ptr_[i] ; }; 
 		    T & operator[]  (size_t i)  { return ptr_[i] ; }; 
@@ -60,7 +64,7 @@ namespace WireCell {
 		    void copy_from( void * s_ptr) {
 			    q_.memcpy( ptr_ ,  s_ptr, sz_* sizeof(T) ).wait() ;
 		    }
-		    T*  to_host() {
+		    T*  to_host()  {
 			    T* ret = (T*) malloc( sizeof(T) * sz_) ;
 			    q_.memcpy( (void *)ret, (void *)ptr_,  sz_* sizeof(T) ).wait() ;
 			    return ret ;
@@ -99,7 +103,9 @@ namespace WireCell {
 			    sz1_ =0 ; 
 			    sz2_ =0 ; 
 		    } 
-		    ~Array2D( ) { sycl::free( ptr_, q_ ) ; } ;
+		    ~Array2D( ) {
+		//	   sycl::free( ptr_, q_ ) ; 
+		    } ;
 	            Array2D( T* ptr, size_t N, size_t M ) {
 			ptr_ = ptr ;
 			sz1_ = N ;
@@ -112,9 +118,23 @@ namespace WireCell {
 			if(init) {
 		            q_.memset(ptr_, 0 , N*M*sizeof(T)) ;
 			}	
+			sz1_ = N ; 
+			sz2_ = M ;
 		    }
+		    Array2D( Array2D & ar) {
+			    ptr_ = ar.data() ;
+			    sz1_ = ar.extent(0) ;
+			    sz2_ = ar.extent(1) ;
+			    q_ = ar.get_queue() ;
+		    }
+		    void alloc(size_t N, size_t M) {
+			    ptr_ = sycl::malloc_device<T> ( N*M, q_ ) ;
+			    sz1_ = N ;
+			    sz2_ = M ;
+		    }
+
 		    T& operator()(size_t i, size_t j ) const { return ptr_[j*sz1_ +  i ] ; };  
-		    void set( const T& value ) { 
+		    void set( const T value ) { 
 			    auto ptr = ptr_ ;
 			    auto v = value ;
 			    q_.parallel_for( sz1_*sz2_ ,[=] (auto i ) {
@@ -130,7 +150,7 @@ namespace WireCell {
 		    void copy_from( void* s_ptr) {
 			    q_.memcpy( ptr_ , s_ptr, sz1_*sz2_* sizeof(T) ).wait() ;
 		    }
-		    T*  to_host() {
+		    T*  to_host()  {
 			    T* ret = (T*) malloc( sizeof(T) * sz1_*sz2_) ;
 			    q_.memcpy( ret, ptr_,  sz1_*sz2_ * sizeof(T) ).wait() ;
 			    return ret ;
@@ -173,6 +193,11 @@ namespace WireCell {
 	struct float_2 {
 		float x ;
 		float y ;
+		friend std::ostream& operator<<(std::ostream& os, const float_2& c ) {
+			os<<"("<<c.x<<","<<c.y<<")" ;
+			return os ;
+
+		}	
 
 	} ;
 
@@ -258,16 +283,15 @@ namespace WireCell {
 	    ArrayType ret(N0, N1, true) ;
 	    return ret ;
         }
-/*
+
         /// Dump out a string for pinting for a 2D view.
         template <class ViewType>
-        inline std::string dump_2d_view(const ViewType& A, const Index length_limit = 20)
+        inline std::string dump_2d_view( ViewType& A, const Index length_limit = 20)
         {
             std::stringstream ss;
             ss << typeid(ViewType).name() << ", shape: {" << A.extent(0) << ", " << A.extent(1) << "} :\n";
 
-            auto h_A = Kokkos::create_mirror_view(A);
-            Kokkos::deep_copy(h_A, A);
+            auto h_A = A.to_host() ; 
 
             Index N0 = A.extent(0);
             Index N1 = A.extent(1);
@@ -291,7 +315,8 @@ namespace WireCell {
 
                         continue;
                     }
-                    ss << h_A(i, j) << " ";
+                    //ss << h_A(i, j) << " ";
+                    ss << h_A[i + j* N0 ] << " ";
                 }
                 ss << std::endl;
             }
@@ -299,7 +324,58 @@ namespace WireCell {
             bool all_zero = true;
             for (Index i = 0; i < N0 && all_zero == true; ++i) {
                 for (Index j = 0; j < N1 && all_zero == true; ++j) {
-                    if (h_A(i, j) != 0) {
+                    if (h_A[i + j* N0 ] != 0) {
+                        all_zero = false;
+                        break;
+                    }
+                }
+            }
+            if (all_zero) {
+                ss << "All Zero!\n";
+            }
+
+            return ss.str();
+        }
+
+        inline std::string dump_2d_c( array_xxc& A, const Index length_limit = 20)
+        {
+            std::stringstream ss;
+            ss << typeid(array_xxc).name() << ", shape: {" << A.extent(0) << ", " << A.extent(1) << "} :\n";
+
+            auto h_A = A.to_host() ; 
+
+            Index N0 = A.extent(0);
+            Index N1 = A.extent(1);
+            bool print_dot0 = true;
+            for (Index i = 0; i < N0; ++i) {
+                if (i > length_limit && i < N0 - length_limit) {
+                    if (print_dot0) {
+                        ss << "... \n";
+                        print_dot0 = false;
+                    }
+                    continue;
+                }
+
+                bool print_dot1 = true;
+                for (Index j = 0; j < N1; ++j) {
+                    if (j > length_limit && j < N1 - length_limit) {
+                        if (print_dot1) {
+                            ss << "... ";
+                            print_dot1 = false;
+                        }
+
+                        continue;
+                    }
+                    //ss << h_A(i, j) << " ";
+                    ss << h_A[i + j* N0 ] << " ";
+                }
+                ss << std::endl;
+            }
+
+            bool all_zero = true;
+            for (Index i = 0; i < N0 && all_zero == true; ++i) {
+                for (Index j = 0; j < N1 && all_zero == true; ++j) {
+                    if (h_A[i + j* N0 ].x != 0 && h_A[i + j* N0 ].y != 0 ) {
                         all_zero = false;
                         break;
                     }
@@ -314,13 +390,12 @@ namespace WireCell {
 
         /// Dump out a string for pinting for a 1D view.
         template <class ViewType>
-        inline std::string dump_1d_view(const ViewType& A, const Index length_limit = 20)
+        inline std::string dump_1d_view( ViewType& A, const Index length_limit = 20)
         {
             std::stringstream ss;
             ss << typeid(ViewType).name() << ", shape: {" << A.extent(0) << "} :\n";
 
-            auto h_A = Kokkos::create_mirror_view(A);
-            Kokkos::deep_copy(h_A, A);
+            auto h_A = A.to_host() ;
 
             Index N0 = A.extent(0);
             bool print_dot1 = true;
@@ -332,13 +407,13 @@ namespace WireCell {
                     }
                     continue;
                 }
-                ss << h_A(j) << " ";
+                ss << h_A[j] << " ";
             }
             ss << std::endl;
 
             bool all_zero = true;
             for (Index j = 0; j < N0 && all_zero == true; ++j) {
-                if (h_A(j) != 0) {
+                if (h_A[j] != 0) {
                     all_zero = false;
                     break;
                 }
@@ -353,7 +428,7 @@ namespace WireCell {
     }  // namespace KokkosArray
 }  // namespace WireCell
 
-
+/*
 #if defined ENABLE_CUDA
     #include "WireCellGenKokkos/SyclArray_cuda.h"
 #elif defined ENABLE_HIP
@@ -361,10 +436,11 @@ namespace WireCell {
 #else
     #include "WireCellGenKokkos/SyclArray_fftw.h"
 #endif
-*/
-    }  // namespace SyclArray
+
+}  // namespace SyclArray
 }  // namespace WireCell
 
+*/
 #include "WireCellGenSycl/SyclArray_cuda.h"
 
 #endif
