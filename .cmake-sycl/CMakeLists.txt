@@ -19,7 +19,7 @@ set(Boost_USE_MULTITHREADED ON)
 
 find_package(CUDA REQUIRED)
 
-string(APPEND CMAKE_CXX_FLAGS "-g -O3  -pedantic -Wall -fsycl -fsycl-targets=nvptx64-nvidia-cuda ")
+string(APPEND CMAKE_CXX_FLAGS "-g -O3 -fopenmp -pedantic -Wall -fsycl -fsycl-targets=nvptx64-nvidia-cuda ")
 string(APPEND CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined")
 
 add_library(WireCellGenSycl SHARED ${all_files})

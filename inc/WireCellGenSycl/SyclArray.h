@@ -43,7 +43,6 @@ namespace WireCell {
 		            q_.memset(ptr_, 0 , N*sizeof(T) )  ;
 			}	
 			sz_ = N ;
-			std::cout<<"Array1D contsructor: size: "<< sz_ <<std::endl ;
 		    }
 		    T & operator[]  (size_t i) const { return ptr_[i] ; }; 
 		    T & operator[]  (size_t i)  { return ptr_[i] ; }; 

@@ -5,7 +5,7 @@
 #include "WireCellGenSycl/SyclArray.h"
 
 #include <iostream>  // debugging.
-//#include <omp.h>
+#include <omp.h>
 
 double g_get_charge_vec_time = 0.0;
 double g_fft_time = 0.0;
@@ -296,7 +296,7 @@ bool GenSycl::ImpactTransform::transform_vector()
 
 bool GenSycl::ImpactTransform::transform_matrix()
 {
- //   double timer_transform = omp_get_wtime();
+    double timer_transform = omp_get_wtime();
     double td0(0.0), td1(.0)   ;
     // arrange the field response (210 in total, pitch_range/impact)
     // number of wires nwires ...
@@ -341,25 +341,20 @@ bool GenSycl::ImpactTransform::transform_matrix()
 
     // now work on the charge part ...
     // trying to sampling ...
-//    double wstart = omp_get_wtime();
-//    td0 += wstart-timer_transform ;
+    double wstart = omp_get_wtime();
+    td0 += wstart-timer_transform ;
     SyclArray::array_xxf f_data = SyclArray::Zero<SyclArray::array_xxf>(end_pitch - start_pitch, m_end_tick - m_start_tick);;
     m_bd.get_charge_matrix_sycl(f_data, m_vec_impact, start_pitch, m_start_tick);
 //    std::cout << SyclArray::dump_2d_view(f_data, 10);
-//    double wend = omp_get_wtime();
-//    td1 += wend-wstart ;
-//    g_get_charge_vec_time += wend - wstart;
+    double wend = omp_get_wtime();
+    td1 += wend-wstart ;
+    g_get_charge_vec_time += wend - wstart;
     //log->debug("ImpactTransform::ImpactTransform() : get_charge_vec() Total running time : {}", g_get_charge_vec_time);
     log->debug("ImpactTransform::ImpactTransform() : get_charge_matrix() Total_Time :  {}", g_get_charge_vec_time);
 
-//    wstart = omp_get_wtime();
+    wstart = omp_get_wtime();
     //SyclArray::array_xxc acc_data_f_w = SyclArray::Zero<SyclArray::array_xxc>(end_ch - start_ch + 2 * npad_wire, m_end_tick - m_start_tick);
     SyclArray::array_xxc acc_data_f_w(end_ch - start_ch + 2 * npad_wire, m_end_tick - m_start_tick);
-   // std::cout<<"zdong2: size: "<<end_ch - start_ch + 2 * npad_wire<<","<< m_end_tick<<  std::endl ;
-    //const SyclArray::WComplex<float> WCf_0(0.0, 0.0) ;
-    //const SyclArray::float_2 WCf_0 = {0.0 , 0.0 } ;
-    //acc_data_f_w.set(WCf_0 ) ;
-   // std::cout<<"zdong4: "<< std::endl ;
     SyclArray::array_xxf acc_data_t_w = SyclArray::Zero<SyclArray::array_xxf>(end_ch - start_ch + 2 * npad_wire, m_end_tick - m_start_tick);
     log->info("yuhw: pitch   {} {} {} {}",start_pitch, end_pitch, f_data.extent(0), f_data.extent(1));
     log->info("yuhw: start-end {}-{} {}-{} {} {}",m_start_ch, m_end_ch, m_start_tick, m_end_tick, acc_data_f_w.extent(0), acc_data_f_w.extent(1));
@@ -369,11 +364,7 @@ bool GenSycl::ImpactTransform::transform_matrix()
     //  Convolution with Field Response
     {
         // fine grained resp. matrix
-        //SyclArray::array_xxc resp_f_w_k =
-        //    SyclArray::Zero<SyclArray::array_xxc>(end_pitch - start_pitch, m_end_tick - m_start_tick);
-        //SyclArray::array_xxc resp_f_w_k(end_pitch - start_pitch, m_end_tick - m_start_tick, false);
         SyclArray::array_xxc resp_f_w_k(end_pitch - start_pitch, m_end_tick - m_start_tick);
-	//resp_f_w_k.set( WCf_0 ) ;
         int nimpact = m_pir->nwires() * (m_num_group - 1);
         assert(end_pitch - start_pitch >= nimpact);
         double max_impact = (0.5 + m_num_pad_wire) * m_pir->pitch();
@@ -382,7 +373,6 @@ bool GenSycl::ImpactTransform::transform_matrix()
         // 2, do various operation in a parallerized fasion
 	
         SyclArray::Array1D<int> idx_d(nimpact, false) ;
-	//SyclArray::array_xxc resp_redu(m_end_tick - m_start_tick, nimpact, false) ;
 	int * idx_h = (int * ) malloc(sizeof(int)*nimpact) ;
         
 	auto ip0 = m_pir->closest(-max_impact + 0.01 * m_pir->impact()) ;
@@ -414,21 +404,16 @@ bool GenSycl::ImpactTransform::transform_matrix()
             int idx = impact < 0.1 * m_pir->impact() ? std::round(nimpact / 2.) - jimp
                                  : end_pitch - start_pitch - (jimp - std::round(nimpact / 2.));
 	    idx_h[jimp] = idx ;
-//	    std::cout<<"host idx["<<jimp<<"]= "<<idx <<std::endl ;
         }
 
         idx_d.copy_from(idx_h);
         sp_fs.copy_from(sps_h);
 
 	auto  sp_ts = SyclArray::idft_cr(sp_fs,1) ;
-    //std::cout << SyclArray::dump_2d_view(sp_ts, 10);
 	if (fillsize < sp_size )  
 		sp_ts.resize(fillsize, nimpact , 0.0) ;
         auto resp_redu = SyclArray::dft_rc(sp_ts,1) ;
-  //  std::cout << SyclArray::dump_2d_c(resp_redu, 10);
 
-//	SyclArray::array_xxc resp_redu(fillsize, nimpact) ;
-//	SyclArray::dft_rc(sp_ts,resp_redu,1) ;
 	auto resp_redu_ptr = resp_redu.data(); ;
 	        sp_ts.free() ;
 	        sp_fs.free() ;
@@ -436,35 +421,13 @@ bool GenSycl::ImpactTransform::transform_matrix()
 	auto idx_d_ptr =idx_d.data() ;
 	auto resp_f_w_k_ptr =resp_f_w_k.data() ;
 
-//	auto red_sz = resp_redu.extent(0)*resp_redu.extent(1) ;
-//	auto resp_sz = resp_f_w_k.extent(0) * resp_f_w_k.extent(1) ;
-//	auto q = SyclEnv::get_queue()  ;
-
-	//SyclArray::array_xxc testa(resp_redu.extent(0), resp_redu.extent(1), false ) ;
-	//SyclArray::array_xxc testa(resp_redu.extent(0), resp_redu.extent(1), false ) ;
-	//SyclArray::array_xxc testa(resp_redu.extent(0), resp_redu.extent(1) ) ;
-	//auto testa = SyclArray::gen_2d_Array<SyclArray::array_xxc>(resp_redu.extent(0), resp_redu.extent(1), {0,0 } ) ;
-	//auto testa_ptr=testa.data() ;
 	q.parallel_for( {resp_redu.extent(0), resp_redu.extent(1)}, [=] (auto item ) {
 			auto i0 = item.get_id(0) ;
 			auto i1 = item.get_id(1) ;
 			auto d0 = item.get_range(0) ; 
-	//		auto d1 = item.get_range(1) ;
-	//		if( i0 == 0  &&  i1 == 0 ) printf(" d0= %d d1=%d\n" , (int)d0, (int)d1 ) ;
-                //resp_f_w_k(idx_d(i1), i0) = resp_redu (i0, i1) ;
-	//	if((idx_d_ptr[i1] + i0*(end_pitch - start_pitch) ) >=  resp_sz || (i0 + i1 * d0) >= red_sz    ) 
-	//	     { 
-//		        printf("i0, i1, idx_d_ptr[i1] %lu %lu %d \n" , i0, i1, idx_d_ptr[i1]) ;
-//			}
-//		       	else
                 resp_f_w_k_ptr[idx_d_ptr[i1] + i0*(end_pitch - start_pitch)] = resp_redu_ptr[i0 + i1 * d0  ] ;
-                //resp_f_w_k_ptr[idx_d_ptr[i1] + i0*(end_pitch - start_pitch)] = {0.0, 0.0} ;
-//		resp_redu_ptr[i0 + i1 * d0  ] = {0.0 , 0.0 } ;
-	//	testa_ptr[i0 + i1 * d0  ] = {0.0 , 0.0 } ;
-		
             }).wait();
 
-   // std::cout << SyclArray::dump_2d_c(resp_f_w_k, 10);
 
         auto data_d = SyclArray::dft_rc(f_data, 0);
 	auto data_d_ptr = data_d.data() ;
@@ -472,54 +435,33 @@ bool GenSycl::ImpactTransform::transform_matrix()
 	SyclArray::array_xxc data_c(data_d.extent(0), data_d.extent(1) ) ;
         SyclArray::dft_cc(data_d, data_c,  1);
 	auto data_c_ptr = data_c.data() ;
-    //std::cout << SyclArray::dump_2d_c(data_c, 10);
 
         SyclArray::dft_cc(resp_f_w_k, data_d, 1);
-	//resp_f_w_k = data_d ;
 	resp_f_w_k.free() ;
-   // std::cout << SyclArray::dump_2d_c(data_d, 10);
 
         // S(f) * R(f)
 	q.parallel_for( {data_c.extent(0), data_c.extent(1)} , [=] (auto item ) {
 		auto i0 = item.get_id(0) ;
 		auto i1 = item.get_id(1) ;
 		auto d0 = item.get_range(0) ; 
-             //   data_c(i0, i1) *= data_d(i0, i1);
-           //     data_c_ptr[i0 + i1*d0] *= data_d_ptr[i0 +  i1*d0];
 	        float a = data_c_ptr[i0 + i1*d0].x * data_d_ptr[i0 +  i1*d0].x - data_c_ptr[i0 + i1*d0].y * data_d_ptr[i0 +  i1*d0].y ;
 	        float b = data_c_ptr[i0 + i1*d0].x * data_d_ptr[i0 +  i1*d0].y + data_c_ptr[i0 + i1*d0].y * data_d_ptr[i0 +  i1*d0].x ;
 	        data_c_ptr[i0 + i1*d0].x = a ; 
 	        data_c_ptr[i0 + i1*d0].y = b ; 
             }).wait();
 
-    //    Kokkos::parallel_for( "S*R",
-      //      Kokkos::MDRangePolicy<Kokkos::Rank<2, Kokkos::Iterate::Left>>({0, 0}, {data_c.extent(0), data_c.extent(1)}),
-       //     KOKKOS_LAMBDA(const SyclArray::Index& i0, const SyclArray::Index& i1) {
-         //       data_c(i0, i1) *= resp_f_w_k(i0, i1);
-                // data_c(i0, i1) *= 1.0;
-           // });
-        // transfer wire to time domain
 	SyclArray::idft_cc(data_c,data_d, 1);
 	data_c.free()  ;
 
-//    std::cout << SyclArray::dump_2d_c(data_d, 10);
+        // extract M(channel) from M(impact)
 	auto acc_data_f_w_ptr = acc_data_f_w.data() ;
 	auto d0_acc = data_d.extent(0) ;
-        // extract M(channel) from M(impact)
 	q.parallel_for( {acc_data_f_w.extent(0), acc_data_f_w.extent(1)} , [=] (auto item ) {
 		auto i0 = item.get_id(0) ;
 		auto i1 = item.get_id(1) ;
 		auto d0 = item.get_range(0) ; 
-                //acc_data_f_w(i0, i1) = data_d((i0 + 1) * 10, i1);
                 acc_data_f_w_ptr[i0 + i1 * d0 ] = data_d_ptr[(i0 + 1) * 10 + i1 * d0_acc ];
             }).wait();
-  //      Kokkos::parallel_for( "Pick ",
-  //          Kokkos::MDRangePolicy<Kokkos::Rank<2, Kokkos::Iterate::Left>>({0, 0}, {acc_data_f_w.extent(0), acc_data_f_w.extent(1)}),
-  //          KOKKOS_LAMBDA(const SyclArray::Index& i0, const SyclArray::Index& i1) {
-  //              acc_data_f_w(i0, i1) = data_c((i0 + 1) * 10, i1);
-  //          });
-  //
-    //std::cout << SyclArray::dump_2d_c(acc_data_f_w, 10);
 	free(idx_h) ;
 	free(sps_h) ;
 	data_d.free() ;
@@ -527,14 +469,11 @@ bool GenSycl::ImpactTransform::transform_matrix()
     }
 
 
-  //  acc_data_t_w = SyclArray::idft_cr(acc_data_f_w, 0);
 
       SyclArray::array_xxf decon_data_v(acc_data_f_w.extent(0),acc_data_f_w.extent(1), false) ;    
       SyclArray::idft_cr(acc_data_f_w, acc_data_t_w, 0); 
     m_decon_data_v = acc_data_t_w ;
-//    std::cout << SyclArray::dump_2d_view(m_decon_data_v, 10);
 
- //    auto acc_data_t_w_h = acc_data_t_w.to_host();
      auto acc_data_t_w_h = m_decon_data_v.to_host();
 //    std::cout << "yuhw: acc_data_t_w_h: " << SyclArray::dump_2d_view(acc_data_t_w,10) << std::endl;
     //std::cout << "mdeconn_data_dv: (75,1) " << acc_data_t_w_h(75,1) <<std::endl ;
@@ -542,18 +481,18 @@ bool GenSycl::ImpactTransform::transform_matrix()
     m_decon_data = acc_data_t_w_eigen; // FIXME: reduce this copy
     std::cout << "mdeconn_data: row, colum" << m_decon_data.rows()<<","<<m_decon_data.cols() <<std::endl ;
     
-//    double timer_fft = omp_get_wtime() - wstart;
-//    g_fft_time += timer_fft ;
+    double timer_fft = omp_get_wtime() - wstart;
+    g_fft_time += timer_fft ;
     std::cout<<"m_decon_data.sum: "<<m_decon_data.rows()<<"," <<m_decon_data.cols()<<",  "<< m_decon_data.sum() <<std::endl ;
     //log->debug("ImpactTransform::transform_matrix: FFT: {}", timer_fft);
-//    timer_transform = omp_get_wtime() - timer_transform;
- //   log->debug("ImpactTransform::transform_matrix: Total: {}", timer_transform);
+    timer_transform = omp_get_wtime() - timer_transform;
+    log->debug("ImpactTransform::transform_matrix: Total: {}", timer_transform);
     log->debug("ImpactTransform::transform_matrix: # of channels: {} # of ticks: {}", m_decon_data.rows(), m_decon_data.cols());
     log->debug("ImpactTransform::transform_matrix: m_decon_data.sum(): {}", m_decon_data.sum());
     std::cout<<"Tranform_matrix_p0_Time: "<<td0 <<std::endl;
     std::cout<<"get_charge_matrix_Time: "<<td1 <<std::endl;
-//    std::cout<<"FFTs_Time: "<<timer_fft <<std::endl;
-//    log->debug("ImpactTransform::transform_matrix: Total_FFT_Time: {}", g_fft_time);
+    std::cout<<"FFTs_Time: "<<timer_fft <<std::endl;
+    log->debug("ImpactTransform::transform_matrix: Total_FFT_Time: {}", g_fft_time);
     return true;
 }
 
@@ -561,7 +500,6 @@ GenSycl::ImpactTransform::~ImpactTransform() {}
 
 Waveform::realseq_t GenSycl::ImpactTransform::waveform(int iwire) const
 {
-//    if(iwire==0) std::cout<<"s-ch,e_ch=" << m_start_ch<<" "<< m_end_ch<<" S_tick,E_tick=" << m_start_tick<<" " <<m_end_tick<<std::endl;
     const int nsamples = m_bd.tbins().nbins();
     if (iwire < m_start_ch || iwire >= m_end_ch) {
         return Waveform::realseq_t(nsamples, 0.0);
@@ -608,7 +546,6 @@ SyclArray::array_xxf GenSycl::ImpactTransform::waveform_v(int nwires, bool cpfla
 
     	const int nsamples = m_bd.tbins().nbins();
 
-	//std::cout<<"LONG SIZE: "<<m_pir->closest(0)->long_aux_waveform().size() << " nsample =" << nsamples<< std::endl ;
 
 	size_t nlength = nsamples  ;
     	if (m_pir->closest(0)->long_aux_waveform().size() > 0) {
@@ -623,14 +560,10 @@ SyclArray::array_xxf GenSycl::ImpactTransform::waveform_v(int nwires, bool cpfla
      	   int samples_start = m_start_tick >0 ? m_start_tick : 0 ;
      	   int samples_end = m_end_tick > nsamples ? nsamples : m_end_tick ;
 	   if(cpflag)  {
-		  // SyclArray::array_xxf data_d(m_decon_data.rows(), m_decon_data.cols(), false) ;
-		  // data_d.copy_from( (float*)m_decon_data.data() );
 		   m_decon_data_v.alloc(m_decon_data.rows(), m_decon_data.cols()) ;
 		  m_decon_data_v.copy_from ((float*)m_decon_data.data() ) ;
 	   }
 
-	   //std::cout<<"WFS m-deconn_data_v: "<<SyclArray::dump_2d_view(data, 10 ) ;
-	   //auto data_ptr = data.data() ;
 	   auto data_ptr = m_decon_data_v.data() ;
 	   auto data_d0 = m_decon_data_v.extent(0) ;
 	   int ofs_ch = m_start_ch ;
@@ -639,24 +572,12 @@ SyclArray::array_xxf GenSycl::ImpactTransform::waveform_v(int nwires, bool cpfla
 	   auto wfs_d0 =  wfs.extent(0) ;
 	   auto wfs_d1 =  wfs.extent(1) ;
 
-	   //std::cout<<"WFS: wfsd01 "<< wfs_d0<<","<<wfs_d1 << " nlength: " << nlength 
-	   //	   << " samples_end: "<< samples_end 
-		//   << " samples_start: "<< samples_start
-	//	   << " chs_end: "<< chs_end 
-	//	   << " chs_start: "<< chs_start
-	//	   <<std::endl ;
 
 	   q.parallel_for( { (size_t )(samples_end -samples_start), (size_t)(chs_end - chs_start) } , [=] (auto item ) {
 		size_t  i0 = item.get_id(0) + samples_start ;
 		size_t  i1 = item.get_id(1) + chs_start  ;
                 wfs_ptr[i0 + i1 * wfs_d0  ] = data_ptr [i1 - ofs_ch +  (i0 - ofs_tick ) * data_d0 ] ;
 	    } ).wait() ; 
-
-           //Kokkos::parallel_for( "ConvData4LongRes ",
-           //    Kokkos::MDRangePolicy<Kokkos::Rank<2, Kokkos::Iterate::Left>>({samples_start, chs_start}, { samples_end , chs_end }),
-           //    KOKKOS_LAMBDA(const SyclArray::Index& i0, const SyclArray::Index& i1) {
-           //        wfs(i0 , i1 ) = data(i1 - ofs_ch , i0 - ofs_tick );
-           // });
 
 
     	if (m_pir->closest(0)->long_aux_waveform().size() > 0) {
@@ -665,8 +586,6 @@ SyclArray::array_xxf GenSycl::ImpactTransform::waveform_v(int nwires, bool cpfla
      	   SyclArray::dft_rc(wfs, specs , 1) ;
      	   auto specs_ptr = specs.data()  ;
 
-//	   SyclArray::dump_2d_c(specs, 10 ) ;
-
            Waveform::realseq_t long_resp = m_pir->closest(0)->long_aux_waveform();
            long_resp.resize(nlength, 0);
            Waveform::compseq_t long_spec = Waveform::dft(long_resp);
@@ -674,9 +593,7 @@ SyclArray::array_xxf GenSycl::ImpactTransform::waveform_v(int nwires, bool cpfla
      
 	   SyclArray::array_xc  long_spec_d(nlength, false) ;
            auto long_spec_h = (complex <float> * ) malloc( sizeof(complex<float>) * nlength ) ;
-     	   //auto long_spec_h = Kokkos::create_mirror_view(long_spec_d) ;
      	   memcpy((void*) &long_spec_h[0] , (void*) &long_spec[0] , nlength*sizeof(std::complex<float>) ) ;
-     	   //Kokkos::deep_copy(long_spec_d, long_spec_h ); 
 	   long_spec_d.copy_from((void * )long_spec_h) ;
 	   auto long_spec_d_ptr = long_spec_d.data()  ;
 
@@ -685,17 +602,10 @@ SyclArray::array_xxf GenSycl::ImpactTransform::waveform_v(int nwires, bool cpfla
 		auto i0 = item.get_id(0)  ;
 		auto i1 = item.get_id(1)  ;
 		auto d0 = item.get_range(0) ;
-    //            specs(i0, i1) *= long_spec_d(i0);
-    //            specs_ptr[i0 + i1 *d0 ] *= long_spec_d_ptr[i0];
                 float a =specs_ptr[i0 + i1 *d0 ].x * long_spec_d_ptr[i0].x - specs_ptr[i0 + i1 *d0 ].y * long_spec_d_ptr[i0].y ;
 		float b =specs_ptr[i0 + i1 *d0 ].x * long_spec_d_ptr[i0].y + specs_ptr[i0 + i1 *d0 ].y * long_spec_d_ptr[i0].x ;
 		specs_ptr[i0 + i1 *d0 ] = {a, b} ;
 	    } ).wait() ; 
-  //         Kokkos::parallel_for( "S*LongR",
-  //         Kokkos::MDRangePolicy<Kokkos::Rank<2, Kokkos::Iterate::Left>>({0, 0}, { specs.extent(0), specs.extent(1)}),
-  //              KOKKOS_LAMBDA(const SyclArray::Index& i0, const SyclArray::Index& i1) {
-  //              specs(i0, i1) *= long_spec_d(i0);
-  //          });
 	   SyclArray::idft_cr(specs,wfs, 1 ); 
       
 	   wfs.resize(nsamples, nwires , 0 ) ;
@@ -703,7 +613,6 @@ SyclArray::array_xxf GenSycl::ImpactTransform::waveform_v(int nwires, bool cpfla
 
 	   free(long_spec_h) ; 
     	}
-//	std::cout<<"WFS:::"<< SyclArray::dump_2d_view(wfs, 10 ) ;
         return wfs;
     
 }
