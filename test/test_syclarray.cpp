@@ -18,11 +18,15 @@ int main () {
   a_d.copy_from( a_host ) ;
   //q.memcpy(a_d.data() , a_host, N*sizeof(float) ).wait() ;
   
-  auto a_d_ptr = a_d.data() ;
+  //auto a_d_ptr = a_d.data() ;
+  auto a_s = a_d.a() ;
   q.parallel_for(N, [=](auto i) {
        int ii = i.get_id() ;
-       if(ii < 10 ) printf( " a_d[%d]=%f \n" , ii, a_d_ptr[ii] ) ;
-       a_d_ptr[ii] += float(ii*ii) ;
+       WireCell::SyclArray::array_xf a_d_k(a_s) ;
+       if(ii < 10 ) printf( " a_d[%d]=%f \n" , ii, a_d_k[ii] ) ;
+       a_d_k(ii) += float(ii*ii) ;
+      // if(ii < 10 ) printf( " a_d[%d]=%f \n" , ii, a_d[ii] ) ;
+       //a_d[ii] += float(ii*ii) ;
 		  } ).wait() ;
   auto rst = a_d.to_host() ;
   //float * rst = (float * ) malloc (sizeof(float) * N)   ;
