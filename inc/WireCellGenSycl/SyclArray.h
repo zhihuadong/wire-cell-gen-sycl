@@ -22,74 +22,102 @@ namespace WireCell {
 	template < class T > 
 	class Array1D 
 	{
+	        struct A1d_s { 
+			T* ptr; 
+			size_t sz ; 
+		}  ;  
 		public :
 		    Array1D() { 
-			    q_ = GenSycl::SyclEnv::get_queue() ;
-			    ptr_ = NULL ; 
-			    sz_ =0 ; 
+		//	    q_ = GenSycl::SyclEnv::get_queue() ;
+			    a_.ptr = NULL ; 
+			    a_.sz =0 ; 
 		    } 
 		    //~Array1D( ) { sycl::free( ptr_, q_ ) ; } ;
 		    ~Array1D( ) {  } ;
 	            Array1D( T* ptr, size_t N ) {
-			ptr_ = ptr ;
-			sz_ = N ;
-
+			a_.ptr = ptr ;
+			a_.sz = N ;
 		    }
-		    void reset(){ sycl::free(ptr_, q_) ; ptr_=NULL ; sz_=0 ;}; 
+	            Array1D( struct A1d_s a ) {
+			a_.ptr = a.ptr ;
+			a_.sz = a.sz ;
+		    }
+	            auto  a() {
+			    return a_ ;
+		    }
+		    void reset(){
+			    auto q = GenSycl::SyclEnv::get_queue();  
+			    sycl::free(a_.ptr, q) ; 
+			    a_.ptr=NULL ; 
+			    a_.sz=0 ;
+		    }; 
 		    Array1D ( size_t N , bool init = true ) {
-			q_ = GenSycl::SyclEnv::get_queue() ;
-			ptr_ = sycl::malloc_device<T> ( N, q_ ) ;   
+			auto q = GenSycl::SyclEnv::get_queue() ;
+			a_.ptr = sycl::malloc_device<T> ( N, q ) ;   
 			if(init) {
-		            q_.memset(ptr_, 0 , N*sizeof(T) )  ;
+		            q.memset(a_.ptr, 0 , N*sizeof(T) )  ;
 			}	
-			sz_ = N ;
+			a_.sz = N ;
 		    }
-		    T & operator[]  (size_t i) const { return ptr_[i] ; }; 
-		    T & operator[]  (size_t i)  { return ptr_[i] ; }; 
-		    T &operator()(size_t i)const { return ptr_[i] ; };  
-		    T &operator()(size_t i) { return ptr_[i] ; };  
+		    T & operator[]  (size_t i) const { return a_.ptr[i] ; }; 
+		    T & operator[]  (size_t i)  { return a_.ptr[i] ; }; 
+		    T &operator()(size_t i)const { return a_.ptr[i] ; };  
+		    T &operator()(size_t i) { return a_.ptr[i] ; };  
 		    void set( T value ) { 
-			    auto ptr = ptr_ ;
-			    q_.parallel_for( sz_ ,[=] (auto i ) {
+			    auto ptr = a_.ptr ;
+			    auto size = a_.sz ;
+			    auto q = GenSycl::SyclEnv::get_queue() ;
+			    q.parallel_for( size ,[=] (auto i ) {
 				ptr[i] = value ;  
 			    }).wait() ;
 		    }
 		    void copy_to( T* d_ptr) {
-			    q_.memcpy(d_ptr , ptr_ , sz_* sizeof(T) ).wait() ;
+			    auto q = GenSycl::SyclEnv::get_queue() ;
+			    q.memcpy(d_ptr , a_.ptr , a_.sz* sizeof(T) ).wait() ;
 		    }
 		    void copy_from( T* s_ptr) {
-			    q_.memcpy( (void * )ptr_ ,(void * ) s_ptr, sz_* sizeof(T) ).wait() ;
+			    auto q = GenSycl::SyclEnv::get_queue() ;
+			    q.memcpy( (void * )a_.ptr ,(void * ) s_ptr, a_.sz* sizeof(T) ).wait() ;
 		    }
 		    void copy_from( void * s_ptr) {
-			    q_.memcpy( ptr_ ,  s_ptr, sz_* sizeof(T) ).wait() ;
+			    auto q = GenSycl::SyclEnv::get_queue() ;
+			    q.memcpy( a_.ptr,  s_ptr, a_.sz* sizeof(T) ).wait() ;
 		    }
 		    T*  to_host()  {
-			    T* ret = (T*) malloc( sizeof(T) * sz_) ;
-			    q_.memcpy( (void *)ret, (void *)ptr_,  sz_* sizeof(T) ).wait() ;
+			    T* ret = (T*) malloc( sizeof(T) * a_.sz) ;
+			    auto q = GenSycl::SyclEnv::get_queue() ;
+			    q.memcpy( (void *)ret, (void *)a_.ptr, a_.sz* sizeof(T) ).wait() ;
 			    return ret ;
 		    }
 		    size_t extent( int i ) const  { 
 			    if (i != 0 ){ 
 				    std::cout<< "Array1D invalid dimmension: "<< i << std::endl ;
 				   exit(1) ;
-			    } else return sz_ ;
+			    } else return a_.sz ;
 		    }
-		    T * data() const { return ptr_ ; } 
+		    T * data() const { return a_.ptr ; } 
 		    void resize( size_t i ) { 
-			    T* ptr1 = sycl::malloc_device<T> ( i , q_) ;
-			    size_t j = sz_ > i ?  i : sz_ ;
-			    q_memcpy(ptr1, ptr_ , j * sizeof (T) ).wait() ;
-			    if ( j > sz_ ) q_memset(ptr1+sz_, 0 , (j-sz_) * sizeof(T) ) ;  
-			    sycl::free (ptr_, q_) ;
-			    ptr_ = ptr1 ;
-			    sz_  = i ;
+			    auto q = GenSycl::SyclEnv::get_queue() ;
+			    T* ptr1 = sycl::malloc_device<T> ( i , q) ;
+			    size_t j = a_.sz > i ?  i : a_.sz ;
+			    q.memcpy(ptr1, a_.ptr , j * sizeof (T) ).wait() ;
+			    if ( j > a_.sz ) q_memset(ptr1+a_.sz, 0 , (j-a_.sz) * sizeof(T) ) ;  
+			    sycl::free (a_.ptr, q) ;
+			    a_.ptr = ptr1 ;
+			    a_.sz_  = i ;
 		    }
-		    void free() { sycl::free(ptr_,q_) ; }
-		    auto get_queue() {return q_ ; }  
+		    void free() { 
+			    auto q = GenSycl::SyclEnv::get_queue() ;
+			    sycl::free(a_.ptr,q) ;
+		    }
+		    auto get_queue() {
+			    auto q = GenSycl::SyclEnv::get_queue() ;
+			    return q ;
+		    }  
+
+
 		private :
-		    T* ptr_ ;
-		    size_t sz_ ;
-		    cl::sycl::queue q_ ;
+		    struct A1d_s a_ ;
 
 	} ;
         /// A  2D array
@@ -97,7 +125,6 @@ namespace WireCell {
 	{
 		public :
 		    Array2D() { 
-			    q_ = GenSycl::SyclEnv::get_queue() ;
 			    ptr_ = NULL ; 
 			    sz1_ =0 ; 
 			    sz2_ =0 ; 
@@ -112,10 +139,10 @@ namespace WireCell {
 
 		    }
 		    Array2D ( size_t N , size_t M , bool init = true ) {
-			q_ = GenSycl::SyclEnv::get_queue() ;
-			ptr_ = sycl::malloc_device<T> ( N*M, q_ ) ;   
+			auto q = GenSycl::SyclEnv::get_queue() ;
+			ptr_ = sycl::malloc_device<T> ( N*M, q ) ;   
 			if(init) {
-		            q_.memset(ptr_, 0 , N*M*sizeof(T)) ;
+		            q.memset(ptr_, 0 , N*M*sizeof(T)) ;
 			}	
 			sz1_ = N ; 
 			sz2_ = M ;
@@ -124,34 +151,39 @@ namespace WireCell {
 			    ptr_ = ar.data() ;
 			    sz1_ = ar.extent(0) ;
 			    sz2_ = ar.extent(1) ;
-			    q_ = ar.get_queue() ;
 		    }
 		    void alloc(size_t N, size_t M) {
-			    ptr_ = sycl::malloc_device<T> ( N*M, q_ ) ;
+			auto q = GenSycl::SyclEnv::get_queue() ;
+			    ptr_ = sycl::malloc_device<T> ( N*M, q ) ;
 			    sz1_ = N ;
 			    sz2_ = M ;
 		    }
 
 		    T& operator()(size_t i, size_t j ) const { return ptr_[j*sz1_ +  i ] ; };  
 		    void set( const T value ) { 
+			auto q = GenSycl::SyclEnv::get_queue() ;
 			    auto ptr = ptr_ ;
 			    auto v = value ;
-			    q_.parallel_for( sz1_*sz2_ ,[=] (auto i ) {
+			    q.parallel_for( sz1_*sz2_ ,[=] (auto i ) {
 				ptr[i] = v ;  
 			    }).wait() ;
 		    }
 		    void copy_to( T* d_ptr) {
-			    q_.memcpy(d_ptr , ptr_ , sz1_*sz2_* sizeof(T) ).wait() ;
+			auto q = GenSycl::SyclEnv::get_queue() ;
+			    q.memcpy(d_ptr , ptr_ , sz1_*sz2_* sizeof(T) ).wait() ;
 		    }
 		    void copy_from( T* s_ptr) {
-			    q_.memcpy( ptr_ ,(void*) s_ptr, sz1_*sz2_* sizeof(T) ).wait() ;
+			auto q = GenSycl::SyclEnv::get_queue() ;
+			    q.memcpy( ptr_ ,(void*) s_ptr, sz1_*sz2_* sizeof(T) ).wait() ;
 		    }
 		    void copy_from( void* s_ptr) {
-			    q_.memcpy( ptr_ , s_ptr, sz1_*sz2_* sizeof(T) ).wait() ;
+			auto q = GenSycl::SyclEnv::get_queue() ;
+			    q.memcpy( ptr_ , s_ptr, sz1_*sz2_* sizeof(T) ).wait() ;
 		    }
 		    T*  to_host()  {
+			auto q = GenSycl::SyclEnv::get_queue() ;
 			    T* ret = (T*) malloc( sizeof(T) * sz1_*sz2_) ;
-			    q_.memcpy( ret, ptr_,  sz1_*sz2_ * sizeof(T) ).wait() ;
+			    q.memcpy( ret, ptr_,  sz1_*sz2_ * sizeof(T) ).wait() ;
 			    return ret ;
 		    }
 
@@ -165,27 +197,33 @@ namespace WireCell {
 		    }
 		    T * data() const { return ptr_ ; } 
 		    void resize( size_t i, size_t j, T value ) { 
-			    T* ptr1 = sycl::malloc_device<T> ( i*j  , q_) ;
+			auto q = GenSycl::SyclEnv::get_queue() ;
+			    T* ptr1 = sycl::malloc_device<T> ( i*j  , q) ;
 			    auto sz1 = sz1_ ;
 			    auto sz2 = sz2_ ;
 			    auto ptr = ptr_ ;
-			    q_.parallel_for( {i , j} , [=] ( auto item ) {
+			    q.parallel_for( {i , j} , [=] ( auto item ) {
 			        auto ii = item.get_id(0) ;
 			        auto jj = item.get_id(1) ;
 		                ptr1[ii + jj * i ] = (ii < sz1 && jj <sz2)   ? ptr[ ii + jj*sz1 ] :  value ;
 			    }).wait() ;
-			    sycl::free (ptr_,q_ ) ;
+			    sycl::free (ptr_,q ) ;
 			    ptr_ = ptr1 ;
 			    sz1_  = i ;
 			    sz2_  = j ;
 		    }
-		    void free() { sycl::free(ptr_,q_) ; }
-		    auto get_queue() {return q_ ; }  
+		    void free() {
+			auto q = GenSycl::SyclEnv::get_queue() ;
+			    sycl::free(ptr_,q) ; 
+		    }
+		    auto get_queue() {
+			auto q = GenSycl::SyclEnv::get_queue() ;
+			    return q ;
+		    }  
 		private :
 		    T* ptr_ ;
 		    size_t sz1_ ;
 		    size_t sz2_ ;
-		    cl::sycl::queue q_ ;
 
 	}; 
 
@@ -200,53 +238,6 @@ namespace WireCell {
 
 	} ;
 
-	template < class T >  class WComplex  //try own with simple wc  needed method only 
-	{	
-		public :
-			WComplex() { x_=0 ; y_=0 ; } 
-			~WComplex() {} ;
-			WComplex( T a , T b) { x_= a; y_= b; } 
-                	WComplex(const T  a) {x_= a; y_ = 0.0 ; }
-			WComplex(const WComplex & a ) {  
-				x_ = a.Real() ;
-				y_ = a.Imag() ; 
-			}
-			T Real()const  { return x_ ; } 
-			T Imag()const  { return y_ ; }
-
-
-			WComplex & operator+ ( const WComplex & a) {
-				WComplex ret(x_+ a.Real(), y_ + a.Imag() ) ;
-				return ret ;
-			}	
-			void operator *= (const WComplex & a ) {
-				x_ = x_ * a.Real() - y_ * a.Imag() ;
-				y_ = x_ * a.Imag() + y_ * a.Real() ;
-			}
-			void operator /= (const T& a ) {
-				if(a == 0.0  ) { 
-				   	printf( "divided by 0\n" )  ;
-				} else  {
-					x_ /= a ;
-					y_ /= a ;
-				}
-			}
-			WComplex & operator- ( const WComplex & a ) {
-				 WComplex ret(x_- a.Real(), y_ - a.Imag() ) ; 
-				 return ret ;
-			}	
-
-			void operator = ( const WComplex & a ) {
-				x_ = a.Real() ;
-				y_ = a.Imag() ;
-			}
-
-
-//		private :
-			T x_ ;
-			T y_ ;
-	};
-	
 	typedef Array1D<Scalar> array_xf;
 
         /// A complex, 1D array

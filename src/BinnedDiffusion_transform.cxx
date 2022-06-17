@@ -253,7 +253,10 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
     auto patch_d_ptr = patch_d.data() ;
     // make a 1Darray pointing to random numbers
     unsigned long size = result[0] ;
+    wg_size = 32 ;
     if( size % 2 )  size++ ; 
+    n_wg = (size/2 + wg_size -1 )/wg_size ;
+    size = n_wg*wg_size*2 ;
     SyclArray::Array1D <double > normals(size, false) ; 
     auto normals_ptr = normals.data() ;
     // temp space to hold uniform rn
@@ -264,10 +267,15 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
     oneapi::mkl::rng::uniform<double >  distr(0.0, 1.0);
     oneapi::mkl::rng::generate(distr, engine, size, temp_ur); 
     //box muller approx to normal distribution
-    q.parallel_for(size/2 , [=](auto i) { 
+    //q.parallel_for(size/2 , [=](auto i) { 
+    //    normals_ptr[2*i]     = sqrt(-2*sycl::log(temp_ur[i])) * sycl::cos(2*PI*temp_ur[i+1]);
+    //    normals_ptr[2*i + 1] = sqrt(-2*sycl::log(temp_ur[i])) * sycl::sin(2*PI*temp_ur[i+1]);	
+    // } ).wait() ;
+    q.parallel_for(sycl::nd_range<1>(size/2, wg_size)  , [=](sycl::nd_item<1> item) { 
+        auto i =  item.get_global_linear_id() ;
         normals_ptr[2*i]     = sqrt(-2*sycl::log(temp_ur[i])) * sycl::cos(2*PI*temp_ur[i+1]);
         normals_ptr[2*i + 1] = sqrt(-2*sycl::log(temp_ur[i])) * sycl::sin(2*PI*temp_ur[i+1]);	
-     } ) ;
+     } ).wait() ;
     sycl::free(temp_ur, q)  ;
 
     t1 = omp_get_wtime() ;
@@ -351,6 +359,7 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
     set_sampling_bat( npatches, nt_d,  np_d,  patch_idx, pvecs_d , tvecs_d, patch_d, normals,gdata  ) ;
     // std::cout << "patch_d: " << typeid(patch_d).name() << std::endl;
     // std::cout << "patch_idx: " << typeid(patch_idx).name() << std::endl;
+    q.wait() ;
     wend = omp_get_wtime();
     g_get_charge_vec_time_part4 += wend-wstart ;
     std::cout<<"SetSample: SetSamplingBatch :"<<wend-t0 <<std::endl ;
@@ -404,6 +413,7 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
 	}) ;	
      } );
 
+    q.wait();
    
     //auto out_h=out.to_host() ;
     //for (int ii=0 ; ii<out.extent(1) ; ii++) 
@@ -945,7 +955,7 @@ void GenSycl::BinnedDiffusion_transform::set_sampling_bat(const unsigned long np
 	        const gd_vt gdata ) {
 
   bool fl = false ;
-  //if( m_fluctuate) fl = true    ;
+  if( m_fluctuate) fl = true    ;
 
   auto q = GenSycl::SyclEnv::get_queue() ;
    
