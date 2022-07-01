@@ -26,6 +26,7 @@ add_library(WireCellGenSycl SHARED ${all_files})
 target_include_directories(WireCellGenSycl
   PRIVATE
     ${PROJECT_SOURCE_DIR}/../inc
+    $ENV{OMPRNG}
     $ENV{EIGEN_INC}
     $ENV{JSONCPP_INC}
     $ENV{JSONNET_INC}
@@ -33,9 +34,9 @@ target_include_directories(WireCellGenSycl
     $ENV{WIRECELL_INC}
 )
 set_target_properties(WireCellGenSycl
-	PROPERTIES COMPILE_OPTIONS "-DEIGEN_NO_CUDA;-DEIGEN_DONT_VECTORIZE")
+	PROPERTIES COMPILE_OPTIONS "-DEIGEN_NO_CUDA;-DEIGEN_DONT_VECTORIZE;-DSYCL_TARGET_CUDA")
 
-target_link_directories(WireCellGenSycl PRIVATE  $ENV{JSONCPP_LIB} $ENV{WIRECELL_LIB} $ENV{ONEMKL_LIB})
-target_link_libraries(WireCellGenSycl PRIVATE  jsoncpp WireCellIface WireCellUtil onemkl Boost::headers ${CUDA_CUFFT_LIBRARIES})
+target_link_directories(WireCellGenSycl PRIVATE  $ENV{JSONCPP_LIB} $ENV{WIRECELL_LIB} })
+target_link_libraries(WireCellGenSycl PRIVATE  jsoncpp WireCellIface WireCellUtil  Boost::headers ${CUDA_CUFFT_LIBRARIES} ${CUDA_curand_LIBRARY})
 
 add_subdirectory(test)

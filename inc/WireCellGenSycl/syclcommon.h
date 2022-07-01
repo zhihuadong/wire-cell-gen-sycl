@@ -2,7 +2,7 @@
 #define GENSYCL_SYCLCOMMON_H_
 #include <CL/sycl.hpp>
 
-#define SYCL_TARGET_CUDA 
+//#define SYCL_TARGET_CUDA 
 
 namespace WireCell::GenSycl::syclcommon {
 

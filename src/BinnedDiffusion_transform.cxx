@@ -9,7 +9,17 @@
 #include <typeinfo>
 
 #include "WireCellGenSycl/SyclEnv.h"
-#include "oneapi/mkl/rng.hpp" 
+//#include "oneapi/mkl/rng.hpp" 
+
+#if defined SYCL_TARGET_CUDA
+#define ARCH_CUDA
+#elif defined SYCL_TARGET_HIP
+#define ARCH_HIP
+#else 
+#error "need define SYCL_TARGET_CUDA or SYCL_TARGET_HIP"
+#endif
+
+#include "openmp_rng.h" 
 
 #define MAX_PATCH_SIZE 512 
 #define P_BLOCK_SIZE  512
@@ -259,9 +269,13 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
     size = n_wg*wg_size*2 ;
     SyclArray::Array1D <double > normals(size, false) ; 
     auto normals_ptr = normals.data() ;
-    // temp space to hold uniform rn
-    auto temp_ur = sycl::malloc_device<double>(size, q) ;
+    //// temp space to hold uniform rn
+    //auto temp_ur = sycl::malloc_device<double>(size, q) ;
     uint64_t seed = 2020;
+
+    generator_enum gen_type = generator_enum::philox;
+    omp_get_rng_normal_double(normals_ptr, n_wg*wg_size, 0.0f, 1.0f, seed, gen_type);
+    /*
     oneapi::mkl::rng::philox4x32x10 engine(q, seed); 
     //generate Uniform distribution 
     oneapi::mkl::rng::uniform<double >  distr(0.0, 1.0);
@@ -276,7 +290,9 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
         normals_ptr[2*i]     = sqrt(-2*sycl::log(temp_ur[i])) * sycl::cos(2*PI*temp_ur[i+1]);
         normals_ptr[2*i + 1] = sqrt(-2*sycl::log(temp_ur[i])) * sycl::sin(2*PI*temp_ur[i+1]);	
      } ).wait() ;
-    sycl::free(temp_ur, q)  ;
+
+     */
+    //sycl::free(temp_ur, q)  ;
 
     t1 = omp_get_wtime() ;
     std::cout<<"SetSample: rand :"<<t1-t0 <<std::endl ;
@@ -705,18 +721,20 @@ void GenSycl::BinnedDiffusion_transform::get_charge_vec(std::vector<std::vector<
     SyclArray::Array1D <double > normals(size, false) ; 
     auto normals_ptr = normals.data() ;
     // temp space to hold uniform rn
-    auto temp_ur = sycl::malloc_device<double>(size, q) ;
+    //auto temp_ur = sycl::malloc_device<double>(size, q) ;
     uint64_t seed = 2020;
-    oneapi::mkl::rng::philox4x32x10 engine(q, seed); 
+    generator_enum gen_type = generator_enum::philox;
+    omp_get_rng_normal_double(normals_ptr, size, 0.0f, 1.0f, seed, gen_type);
+    //oneapi::mkl::rng::philox4x32x10 engine(q, seed); 
     //generate Uniform distribution 
-    oneapi::mkl::rng::uniform<double >  distr(0.0, 1.0);
-    oneapi::mkl::rng::generate(distr, engine, size, temp_ur); 
-    //box muller approx to normal distribution
-    q.parallel_for(size/2 , [=](auto i) { 
-        normals_ptr[2*i]     = sqrt(-2*sycl::log(temp_ur[i])) * sycl::cos(2*PI*temp_ur[i+1]);
-        normals_ptr[2*i + 1] = sqrt(-2*sycl::log(temp_ur[i])) * sycl::sin(2*PI*temp_ur[i+1]);	
-     } ) ;
-    sycl::free(temp_ur, q)  ;
+   // oneapi::mkl::rng::uniform<double >  distr(0.0, 1.0);
+   // oneapi::mkl::rng::generate(distr, engine, size, temp_ur); 
+   // //box muller approx to normal distribution
+   // q.parallel_for(size/2 , [=](auto i) { 
+   //     normals_ptr[2*i]     = sqrt(-2*sycl::log(temp_ur[i])) * sycl::cos(2*PI*temp_ur[i+1]);
+   //     normals_ptr[2*i + 1] = sqrt(-2*sycl::log(temp_ur[i])) * sycl::sin(2*PI*temp_ur[i+1]);	
+    // } ) ;
+   // sycl::free(temp_ur, q)  ;
 
     // decide weight calculation
     int weightstrat = m_calcstrat;
