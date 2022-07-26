@@ -3,8 +3,20 @@
    point in space where a field response function begins.
  */
 
+#ifdef __CUDA_ARCH__
+#undef __CUDA_ARCH__
+#define HAVE_CUDA
+#endif
+
 #include "WireCellUtil/Waveform.h"
+
+#ifdef HAVE_CUDA
+#undef HAVE_CUDA
+#define __CUDA_ARCH__
+#endif
+
 #include "WireCellGenSycl/GaussianDiffusion.h"
+
 
 #include <memory>
 #include <vector>

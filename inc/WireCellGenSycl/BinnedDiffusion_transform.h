@@ -1,7 +1,15 @@
 #ifndef WIRECELL_GENSYCL_BINNEDDIFFUSION_TRANSFORM
 #define WIRECELL_GENSYCL_BINNEDDIFFUSION_TRANSFORM
 
+#ifdef __CUDA_ARCH__
+#warning "__CUDA_ARCH__"
+#undef __CUDA_ARCH__
 #include <Eigen/Sparse>
+#define __CUDA_ARCH__
+#else 
+#include <Eigen/Sparse>
+#endif
+
 #include "WireCellUtil/Pimpos.h"
 #include "WireCellUtil/Point.h"
 #include "WireCellUtil/Units.h"

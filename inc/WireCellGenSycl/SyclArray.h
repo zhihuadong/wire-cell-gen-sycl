@@ -418,19 +418,12 @@ namespace WireCell {
     }  // namespace KokkosArray
 }  // namespace WireCell
 
-/*
-#if defined ENABLE_CUDA
-    #include "WireCellGenKokkos/SyclArray_cuda.h"
-#elif defined ENABLE_HIP
-    #include "WireCellGenKokkos/SyclArray_hip.h"
+#if defined(SYCL_TARGET_CUDA)
+    #include "WireCellGenSycl/SyclArray_cuda.h"
+#elif defined(SYCL_TARGET_HIP)
+    #include "WireCellGenSycl/SyclArray_hip.h"
 #else
-    #include "WireCellGenKokkos/SyclArray_fftw.h"
+    #include "WireCellGenSycl/SyclArray_fftw.h"
 #endif
-
-}  // namespace SyclArray
-}  // namespace WireCell
-
-*/
-#include "WireCellGenSycl/SyclArray_cuda.h"
 
 #endif

@@ -1,12 +1,24 @@
 #ifndef WIRECELL_GENSYCL_IMPACTTRANSFORM
 #define WIRECELL_GENSYCL_IMPACTTRANSFORM
 
+#ifdef __CUDA_ARCH__
+#define __CUDA_PASS__
+#undef __CUDA_ARCH__
+#endif
+
 #include "WireCellIface/IPlaneImpactResponse.h"
-#include "WireCellGenSycl/BinnedDiffusion_transform.h"
 #include "WireCellUtil/Array.h"
 #include "WireCellUtil/Logging.h"
-
 #include <Eigen/Sparse>
+
+#ifdef __CUDA_PASS__
+#undef __cuda_PASS__
+#define __CUDA_ARCH__
+#endif
+
+
+
+#include "WireCellGenSycl/BinnedDiffusion_transform.h"
 
 namespace WireCell {
     namespace GenSycl {

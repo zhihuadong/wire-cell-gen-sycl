@@ -3,14 +3,14 @@
  */
 
 #ifndef WIRECELL_SYCLARRAY_FFTW
-#define WIRECELL_KOKKOSARRAY_FFTW
+#define WIRECELL_SYCLARRAY_FFTW
 
 #include <WireCellUtil/Array.h> // tmp solution
 #include <iostream> //debug
 
 namespace WireCell {
 
-    namespace KokkosArray {
+    namespace SyclArray {
         /**
          * using eigen based WireCell::Array for fast prototyping
          * this may introduce extra data copying, will investigate later
@@ -23,7 +23,7 @@ namespace WireCell {
         {
             Eigen::Map<Eigen::VectorXf> in_eigen((float*) in.data(), in.extent(0));
             Eigen::VectorXcf out_eigen = gEigenFFT.fwd(in_eigen);
-            array_xc out(out_eigen.size(),false) ;
+            array_xc out(out_eigen.size()) ;
             memcpy( (void*)out.data(), (void*)out_eigen.data(), out_eigen.size()*sizeof(float) * 2);
             return out;
         }
@@ -31,19 +31,30 @@ namespace WireCell {
         {
             Eigen::Map<Eigen::VectorXcf> in_eigen((std::complex<float>*) in.data(), in.extent(0));
             Eigen::VectorXf out_eigen = gEigenFFT.inv(in_eigen);
-            array_xf out(out_eigen.size(),false) ;
+            array_xf out(out_eigen.size()) ;
             memcpy( (void*)out.data(), (void*)out_eigen.data(), out_eigen.size()*sizeof(float));
             return out;
         }
         inline array_xxc dft_rc(const array_xxf& in, int dim = 0)
         {
-            std::cout << "WIRECELL_KOKKOSARRAY_FFTW" << std::endl;
+            std::cout << "WIRECELL_SYCLARRAY_FFTW" << std::endl;
             Eigen::Map<Eigen::ArrayXXf> in_eigen((float*) in.data(), in.extent(0), in.extent(1));
             auto out_eigen = WireCell::Array::dft_rc(in_eigen, dim);
-            auto out = gen_2d_view<array_xxc>(out_eigen.rows(), out_eigen.cols(), 0);
+            //auto out = gen_2d_Array<array_xxc>(out_eigen.rows(), out_eigen.cols(), 0);
+            auto out = array_xxc(out_eigen.rows(), out_eigen.cols());
             memcpy( (void*)out.data(), (void*)out_eigen.data(), out_eigen.rows()*out_eigen.cols()*sizeof(Scalar) * 2);
 
             return out;
+        }
+	inline void dft_rc(const array_xxf& in, array_xxc& out,int dim = 0)
+        {
+            std::cout << "WIRECELL_SYCLARRAY_FFTW" << std::endl;
+            Eigen::Map<Eigen::ArrayXXf> in_eigen((float*) in.data(), in.extent(0), in.extent(1));
+            auto out_eigen = WireCell::Array::dft_rc(in_eigen, dim);
+            //auto out = gen_2d_Array<array_xxc>(out_eigen.rows(), out_eigen.cols(), 0);
+            //auto out = array_xxc(out_eigen.rows(), out_eigen.cols());
+            memcpy( (void*)out.data(), (void*)out_eigen.data(), out_eigen.rows()*out_eigen.cols()*sizeof(Scalar) * 2);
+
         }
         inline array_xxc dft_cc(const array_xxc& in, int dim = 0)
         {
@@ -93,7 +104,7 @@ namespace WireCell {
             memcpy( (void*)out.data(), (void*)out_eigen.data(), out_eigen.rows()*out_eigen.cols()*sizeof(Scalar));
         }
 
-    }  // namespace KokkosArray
+    }  // namespace SyclArray
 }  // namespace WireCell
 
 #endif

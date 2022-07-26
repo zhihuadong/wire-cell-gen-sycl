@@ -4,6 +4,11 @@
 #ifndef WIRECELL_GENSYCL_DEPOTRANSFORM
 #define WIRECELL_GENSYCL_DEPOTRANSFORM
 
+#ifdef __CUDA_ARCH__
+#undef __CUDA_ARCH__
+#define HAVE_CUDA
+#endif
+
 #include "WireCellIface/IDepoFramer.h"
 #include "WireCellIface/IConfigurable.h"
 #include "WireCellIface/IRandom.h"
@@ -12,6 +17,11 @@
 #include "WireCellIface/WirePlaneId.h"
 #include "WireCellIface/IDepo.h"
 #include "WireCellUtil/Logging.h"
+
+#ifdef HAVE_CUDA
+#undef HAVE_CUDA
+#define __CUDA_ARCH__
+#endif
 
 #include <CL/sycl.hpp>
 

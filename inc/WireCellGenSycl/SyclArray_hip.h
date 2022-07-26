@@ -2,10 +2,22 @@
  * Wrappers for cuFFT based FFT
  */
 
-#ifndef WIRECELL_SYCLARRAY_CUDA
-#define WIRECELL_SYCLARRAY_CUDA
+#ifndef WIRECELL_SYCLARRAY_HIP
+#define WIRECELL_SYCLARRAY_HIP
+
+#ifdef __CUDA_ARCH__
+#define __CUDA_PASS__
+#undef __CUDA_ARCH__
+#endif
 
 #include <hipfft.h>
+
+#ifdef __CUDA_PASS__
+#undef __CUDA_PASS__
+#define __CUDA_ARCH__
+#endif
+
+
 #include <assert.h>
 
 namespace WireCell {

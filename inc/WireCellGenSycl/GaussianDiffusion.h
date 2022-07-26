@@ -1,10 +1,24 @@
 #ifndef WIRECELL_GENSYCL_GAUSSIANDIFFUSION
 #define WIRECELL_GENSYCL_GAUSSIANDIFFUSION
 
+
+#ifdef __CUDA_ARCH__
+#define HAVE_CUDA
+#undef __CUDA_ARCH__
+#endif
+
+
 #include "WireCellUtil/Array.h"
 #include "WireCellUtil/Binning.h"
 #include "WireCellIface/IDepo.h"
 #include "WireCellIface/IRandom.h"
+
+
+#ifdef HAVE_CUDA
+#define __CUDA_ARCH_
+#undef HAVE_CUDA
+#endif
+
 
 #include <memory>
 #include <iostream>

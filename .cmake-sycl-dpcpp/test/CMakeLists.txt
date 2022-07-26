@@ -13,10 +13,9 @@ foreach(source_file IN LISTS all_execs)
     PRIVATE
       ${PROJECT_SOURCE_DIR}/../inc
       $ENV{WIRECELL_INC}
-      $ENV{HIPFFT_INC}
-      $ENV{HIP_DIR}/include
+      $ENV{EIGEN_INC}
   )
-set_target_properties(${exec_name}
-        PROPERTIES COMPILE_OPTIONS "-DSYCL_TARGET_HIP")
+#set_target_properties(${exec_name}
+#        PROPERTIES COMPILE_OPTIONS "-DSYCL_TARGET_HIP")
 
 endforeach()

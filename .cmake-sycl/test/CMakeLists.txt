@@ -13,5 +13,6 @@ foreach(source_file IN LISTS all_execs)
     PRIVATE
       ${PROJECT_SOURCE_DIR}/../inc
       $ENV{WIRECELL_INC}
+      $ENV{EIGEN_INC}
   )
 endforeach()

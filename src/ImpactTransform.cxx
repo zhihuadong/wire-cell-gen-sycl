@@ -429,6 +429,8 @@ bool GenSycl::ImpactTransform::transform_matrix()
 	f_data.free()  ;
 	q.wait();
 	SyclArray::array_xxc data_c(data_d.extent(0), data_d.extent(1) ) ;
+
+
         SyclArray::dft_cc(data_d, data_c,  1);
 	auto data_c_ptr = data_c.data() ;
 
@@ -448,14 +450,19 @@ bool GenSycl::ImpactTransform::transform_matrix()
 	SyclArray::idft_cc(data_c,data_d, 1);
 	data_c.free()  ;
 
+//	std::cout<<"Size: data_d: " << data_d.extent(0)<<","<< data_d.extent(1)<<" ; acc_data_f_w: "<< acc_data_f_w.extent(0) <<";" << acc_data_f_w.extent(1) <<std::endl ;
+//	std::cout<<"Size: data_c: " << data_c.extent(0)<<","<< data_c.extent(1)<<" ; acc_data_t_w: "<< acc_data_t_w.extent(0) <<";" << acc_data_t_w.extent(1) <<std::endl ;
         // extract M(channel) from M(impact)
+
+
 	auto acc_data_f_w_ptr = acc_data_f_w.data() ;
 	auto d0_acc = data_d.extent(0) ;
 	q.parallel_for( {acc_data_f_w.extent(0), acc_data_f_w.extent(1)} , [=] (auto item ) {
 		auto i0 = item.get_id(0) ;
 		auto i1 = item.get_id(1) ;
 		auto d0 = item.get_range(0) ; 
-                acc_data_f_w_ptr[i0 + i1 * d0 ] = data_d_ptr[(i0 + 1) * 10 + i1 * d0_acc ];
+               // acc_data_f_w_ptr[i0 + i1 * d0 ] = data_d_ptr[(i0 + 1) * 10 + i1 * d0_acc ];
+                acc_data_f_w_ptr[i0 + i1 * d0 ] = data_d_ptr[(i0 ) * 10 + i1 * d0_acc ];
             }).wait();
 	free(idx_h) ;
 	free(sps_h) ;
@@ -467,6 +474,7 @@ bool GenSycl::ImpactTransform::transform_matrix()
 
       SyclArray::array_xxf decon_data_v(acc_data_f_w.extent(0),acc_data_f_w.extent(1), false) ;    
       SyclArray::idft_cr(acc_data_f_w, acc_data_t_w, 0); 
+
     m_decon_data_v = acc_data_t_w ;
 
      auto acc_data_t_w_h = m_decon_data_v.to_host();
@@ -474,7 +482,7 @@ bool GenSycl::ImpactTransform::transform_matrix()
     //std::cout << "mdeconn_data_dv: (75,1) " << acc_data_t_w_h(75,1) <<std::endl ;
     Eigen::Map<Eigen::ArrayXXf> acc_data_t_w_eigen((float*) acc_data_t_w_h, acc_data_t_w.extent(0), acc_data_t_w.extent(1));
     m_decon_data = acc_data_t_w_eigen; // FIXME: reduce this copy
-    std::cout << "mdeconn_data: row, colum" << m_decon_data.rows()<<","<<m_decon_data.cols() <<std::endl ;
+    std::cout << "mdeconn_data: row, colum " << m_decon_data.rows()<<","<<m_decon_data.cols() <<std::endl ;
     
     double timer_fft = omp_get_wtime() - wstart;
     g_fft_time += timer_fft ;
