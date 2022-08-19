@@ -36,6 +36,9 @@
    going on with these two pairs of classes.
 
  */
+#if defined(SYCL_TARGET_HIP) && defined(__CUDA_ARCH__) 
+#undef __CUDA_ARCH__
+#endif 
 
 #include "WireCellGenSycl/DepoTransform.h"
 #include "WireCellGenSycl/ImpactTransform.h"
@@ -81,6 +84,9 @@ void GenSycl::DepoTransform::configure(const WireCell::Configuration& cfg)
         auto rng_tn = get<string>(cfg, "rng", "");
         m_rng = Factory::find_tn<IRandom>(rng_tn);
     }
+
+    std::string dft_tn = get<string>(cfg, "dft", "FftwDFT");
+    m_dft = Factory::find_tn<IDFT>(dft_tn); 
 
     m_readout_time = get<double>(cfg, "readout_time", m_readout_time);
     m_tick = get<double>(cfg, "tick", m_tick);
@@ -218,7 +224,7 @@ bool GenSycl::DepoTransform::operator()(const input_pointer& in, output_pointer&
             auto& wires = plane->wires();
 
             auto pir = m_pirs.at(iplane);
-            GenSycl::ImpactTransform transform(pir, bindiff);
+            GenSycl::ImpactTransform transform(pir, m_dft, bindiff);
 
             double t1=omp_get_wtime() ;
 	    td0+=t1-t0 ;

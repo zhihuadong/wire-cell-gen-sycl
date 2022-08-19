@@ -9,6 +9,7 @@
 #endif
 
 #include "WireCellUtil/Waveform.h"
+#include "WireCellIface/IDFT.h"
 
 #ifdef HAVE_CUDA
 #undef HAVE_CUDA
@@ -21,8 +22,8 @@
 #include <memory>
 #include <vector>
 
-#ifndef WIRECELLGEN_IMPACTDATA
-#define WIRECELLGEN_IMPACTDATA
+#ifndef WIRECELL_GEN_SYCL_IMPACTDATA
+#define WIRECELL_GEN_SYCL_IMPACTDATA
 
 namespace WireCell {
     namespace GenSycl {
@@ -68,7 +69,7 @@ namespace WireCell {
              * linear or constant (all = 0.5),
              * and honoring the Gaussian distribution (diffusion).
              */
-	    void calculate(int nticks) const;
+	    void calculate(const IDFT::pointer& dft, int nticks) const;
 
 
 

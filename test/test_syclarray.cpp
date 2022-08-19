@@ -1,12 +1,13 @@
 #include "WireCellGenSycl/SyclEnv.h"
 #include "WireCellGenSycl/SyclArray.h"
-
+#include <omp.h>
 
 
 using namespace WireCell::GenSycl ;
 
 int main () {
 
+double t0 = omp_get_wtime() ;
   const size_t N = 100000 ;
   auto e = SyclEnv() ;
   auto q = SyclEnv::get_queue() ;
@@ -20,7 +21,12 @@ int main () {
   //q.memcpy(a_d.data() , a_host, N*sizeof(float) ).wait() ;
   
   //auto a_d_ptr = a_d.data() ;
+  //
+
   auto a_s = a_d.a() ;
+  q.wait() ;
+double t1 = omp_get_wtime();
+std::cout<<"before Kernel time: "<< t1-t0<<std::endl ;
 
   q.submit([&] (sycl::handler &h ) {
   sycl::stream out(1024, 128, h ) ;
@@ -29,7 +35,7 @@ int main () {
        int ii = i.get_id() ;
        WireCell::SyclArray::array_xf a_d_k(a_s) ;
 
-       if(ii < 10 ) out<<"a_d["<<ii<<"]= "<< a_d_k[ii] << cl::sycl::endl ;
+    //   if(ii < 10 ) out<<"a_d["<<ii<<"]= "<< a_d_k[ii] << cl::sycl::endl ;
    //    if(ii < 10 ) printf( " a_d[%d]=%f \n" , ii, a_d_k[ii] ) ;
        a_d_k(ii) += float(ii*ii) ;
       // if(ii < 10 ) printf( " a_d[%d]=%f \n" , ii, a_d[ii] ) ;
@@ -39,6 +45,10 @@ int main () {
   }) ;
   q.wait() ;
   auto rst = a_d.to_host() ;
+  q.wait() ;
+double t2 = omp_get_wtime() ;
+std::cout<<"Kernel time: "<< t2-t1<<std::endl ;
+
   //float * rst = (float * ) malloc (sizeof(float) * N)   ;
   //   q.memcpy(rst, a_d_ptr, N* sizeof(float) ) ;
 

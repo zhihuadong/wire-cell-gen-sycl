@@ -415,7 +415,7 @@ namespace WireCell {
             return ss.str();
         }
 
-    }  // namespace KokkosArray
+    }  // namespace SyclArray
 }  // namespace WireCell
 
 #if defined(SYCL_TARGET_CUDA)

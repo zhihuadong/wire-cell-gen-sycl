@@ -61,6 +61,9 @@ bool inline GenSycl::SyclEnv::Init() {
         device_ = ctx_->get_devices()[0];
         queue_ = cl::sycl::queue(*ctx_, device_);
       }
+         double * a = sycl::malloc_device<double>(10, queue_) ;
+         queue_.parallel_for(10, [=] (auto i ) { a[i]  = (double)i*i ; }).wait() ;
+	 std::cout<<"SyclEnv: "<<std::endl ;
 	     return true ;
 
 }

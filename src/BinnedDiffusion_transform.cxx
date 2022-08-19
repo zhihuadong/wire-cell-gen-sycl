@@ -209,7 +209,6 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
     // Kernel for calculate nt and np and offset_bin s for t and p for each gd
     int nsigma = m_nsigma;
     
-    
     //temperary work around , need redesign syclarray without queue, 
     //or they can not be used in kernels
     auto gdata_ptr=gdata.data() ;
@@ -221,6 +220,18 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
     auto tvecs_d_ptr = tvecs_d.data() ;
     auto qweights_d_ptr = qweights_d.data() ;
     auto out_ptr = out.data() ;
+q.wait() ;
+//debug
+    double * a = sycl::malloc_device<double>(10, q) ;
+    double t0_0 =omp_get_wtime() ; 
+    q.parallel_for(sycl::range<1>(10), [=] (auto ii) {
+		    auto i = ii.get_id(0); 
+       a[i]=0.0 ;
+      }).wait() ;
+//end debug
+
+    double t0_1 =omp_get_wtime() ; 
+    std::cout<<"dummy kernel time: "<< t0_1-t0_0 <<std::endl ;
 
     q.parallel_for(npatches, [=] (auto i) {
         double t_s = gdata_ptr[i].t_ct - gdata_ptr[i].t_sigma * nsigma;
@@ -241,7 +252,7 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
    
 
     t1 = omp_get_wtime() ;
-    std::cout<<"SetSample: nt,np :"<<t1-t0 <<std::endl ;
+    std::cout<<"SetSample: nt,np :"<<t1-t0_1 <<std::endl ;
     std::cout<<"npatches= "<<npatches <<std::endl ;
 
     //temperary hold nt*np to scan, can we get rid of it ?

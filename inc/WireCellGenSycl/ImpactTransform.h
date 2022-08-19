@@ -7,6 +7,7 @@
 #endif
 
 #include "WireCellIface/IPlaneImpactResponse.h"
+#include "WireCellIface/IDFT.h"
 #include "WireCellUtil/Array.h"
 #include "WireCellUtil/Logging.h"
 #include <Eigen/Sparse>
@@ -28,6 +29,7 @@ namespace WireCell {
          */
         class ImpactTransform {
             IPlaneImpactResponse::pointer m_pir;
+	    IDFT::pointer m_dft; 
             BinnedDiffusion_transform& m_bd;
 
             int m_num_group;     // how many 2D convolution is needed
@@ -47,7 +49,7 @@ namespace WireCell {
             Log::logptr_t log;
 
            public:
-            ImpactTransform(IPlaneImpactResponse::pointer pir, BinnedDiffusion_transform& bd);
+            ImpactTransform(IPlaneImpactResponse::pointer pir, const IDFT::pointer& dft , BinnedDiffusion_transform& bd);
             virtual ~ImpactTransform();
 
             bool transform_vector();

@@ -26,6 +26,8 @@ add_library(WireCellGenSycl SHARED ${all_files})
 target_include_directories(WireCellGenSycl
   PRIVATE
     ${PROJECT_SOURCE_DIR}/../inc
+    $ENV{FMT_INC}
+    $ENV{FFTW_INC}
     $ENV{OMPRNG}
     $ENV{EIGEN_INC}
     $ENV{JSONCPP_INC}
@@ -34,9 +36,9 @@ target_include_directories(WireCellGenSycl
     $ENV{WIRECELL_INC}
 )
 set_target_properties(WireCellGenSycl
-	PROPERTIES COMPILE_OPTIONS "-DEIGEN_NO_CUDA;-DEIGEN_DONT_VECTORIZE;-DSYCL_TARGET_CUDA")
+	PROPERTIES COMPILE_OPTIONS "-DEIGEN_NO_CUDA;-DEIGEN_DONT_VECTORIZE;-DSYCL_TARGET_CUDA;-DSPDLOG_SHARED_LIB;-DSPDLOG_COMPILED_LIB;-DSPDLOG_FMT_EXTERNAL")
 
-target_link_directories(WireCellGenSycl PRIVATE  $ENV{JSONCPP_LIB} $ENV{WIRECELL_LIB} })
-target_link_libraries(WireCellGenSycl PRIVATE  jsoncpp WireCellIface WireCellUtil  Boost::headers ${CUDA_CUFFT_LIBRARIES} ${CUDA_curand_LIBRARY})
+target_link_directories(WireCellGenSycl PRIVATE  $ENV{JSONCPP_LIB} $ENV{WIRECELL_LIB}  $ENV{FMT_LIB} $ENV{FFTW_LIB} $ENV{SPDLOG_LIB})
+target_link_libraries(WireCellGenSycl PRIVATE  jsoncpp WireCellIface WireCellUtil  WireCellAux fftw3f fmt spdlog Boost::headers ${CUDA_CUFFT_LIBRARIES} ${CUDA_curand_LIBRARY} dl)
 
 add_subdirectory(test)

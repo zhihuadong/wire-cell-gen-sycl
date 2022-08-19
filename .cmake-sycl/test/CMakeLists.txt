@@ -15,4 +15,6 @@ foreach(source_file IN LISTS all_execs)
       $ENV{WIRECELL_INC}
       $ENV{EIGEN_INC}
   )
+  set_target_properties( ${exec_name}
+	PROPERTIES COMPILE_OPTIONS "-DSYCL_TARGET_CUDA")
 endforeach()
