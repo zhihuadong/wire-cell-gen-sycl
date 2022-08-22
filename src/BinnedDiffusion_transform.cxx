@@ -1026,7 +1026,6 @@ void GenSycl::BinnedDiffusion_transform::set_sampling_bat(const unsigned long np
       double charge=gdata_ptr[ip].charge ;
       double charge_abs = abs(charge) ;
 
-      float p_v =0.0 ;
 
       for ( int it = 0 ; it < n_it  ; it ++ ) {
           int ii  = it * wg_size + id  ;
@@ -1055,7 +1054,7 @@ void GenSycl::BinnedDiffusion_transform::set_sampling_bat(const unsigned long np
 	  for ( int it = 0 ; it < n_it    ; it ++ ) {
 	      int ii  = it * wg_size + id  ;
 	      if( ii < patch_size ) { 
-	       double p =  (double)p_v/charge ; //normalized to total 1
+	       double p =  (double)patch_d_ptr[ii + p0 ]/charge ; //normalized to total 1
 	       //if( p <0 || p>1.0 ) out<<"sqrt-: "<<ip<<" "<<ii<<" "<<p0<<" "<<ii+p0<<" \n" ;
 	       double q = 1.0-p ;
 	       double mu = n*p ;
