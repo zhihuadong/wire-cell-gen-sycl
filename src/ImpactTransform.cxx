@@ -416,7 +416,7 @@ bool GenSycl::ImpactTransform::transform_matrix()
 	auto idx_d_ptr =idx_d.data() ;
 	auto resp_f_w_k_ptr =resp_f_w_k.data() ;
 
-	q.parallel_for( {resp_redu.extent(0), resp_redu.extent(1)}, [=] (auto item ) {
+	q.parallel_for( sycl::range<2>(resp_redu.extent(0), resp_redu.extent(1)), [=] (auto item ) {
 			auto i0 = item.get_id(0) ;
 			auto i1 = item.get_id(1) ;
 			auto d0 = item.get_range(0) ; 
@@ -440,7 +440,8 @@ bool GenSycl::ImpactTransform::transform_matrix()
 
 
 	// S(f) * R(f)
-	q.parallel_for( data_c.extent(0)*data_c.extent(1) , [=] (auto i0 ) {
+	q.parallel_for( sycl::range<1>(data_c.extent(0)*data_c.extent(1)) , [=] (auto item ) {
+     		auto i0 = item.get_id(0) ;
 	        float a = data_c_ptr[i0].x * data_d_ptr[i0].x - data_c_ptr[i0].y * data_d_ptr[i0].y ;
 	        float b = data_c_ptr[i0].x * data_d_ptr[i0].y + data_c_ptr[i0].y * data_d_ptr[i0].x ;
 	        data_c_ptr[i0].x = a ; 
@@ -457,7 +458,7 @@ bool GenSycl::ImpactTransform::transform_matrix()
 
 	auto acc_data_f_w_ptr = acc_data_f_w.data() ;
 	auto d0_acc = data_d.extent(0) ;
-	q.parallel_for( {acc_data_f_w.extent(0), acc_data_f_w.extent(1)} , [=] (auto item ) {
+	q.parallel_for( sycl::range<2>(acc_data_f_w.extent(0), acc_data_f_w.extent(1)) , [=] (auto item ) {
 		auto i0 = item.get_id(0) ;
 		auto i1 = item.get_id(1) ;
 		auto d0 = item.get_range(0) ; 
@@ -576,7 +577,7 @@ SyclArray::array_xxf GenSycl::ImpactTransform::waveform_v(int nwires, bool cpfla
 	   auto wfs_d1 =  wfs.extent(1) ;
 
 
-	   q.parallel_for( { (size_t )(samples_end -samples_start), (size_t)(chs_end - chs_start) } , [=] (auto item ) {
+	   q.parallel_for( sycl::range<2> ( (size_t )(samples_end -samples_start), (size_t)(chs_end - chs_start) ) , [=] (auto item ) {
 		size_t  i0 = item.get_id(0) + samples_start ;
 		size_t  i1 = item.get_id(1) + chs_start  ;
                 wfs_ptr[i0 + i1 * wfs_d0  ] = data_ptr [i1 - ofs_ch +  (i0 - ofs_tick ) * data_d0 ] ;
@@ -601,7 +602,7 @@ SyclArray::array_xxf GenSycl::ImpactTransform::waveform_v(int nwires, bool cpfla
 	   auto long_spec_d_ptr = long_spec_d.data()  ;
 
            // S(f) * LongR(f)
-	   q.parallel_for(  { specs.extent(0), specs.extent(1)} , [=] (auto item ) {
+	   q.parallel_for(  sycl::range( specs.extent(0), specs.extent(1)) , [=] (auto item ) {
 		auto i0 = item.get_id(0)  ;
 		auto i1 = item.get_id(1)  ;
 		auto d0 = item.get_range(0) ;

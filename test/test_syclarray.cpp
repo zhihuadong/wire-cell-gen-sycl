@@ -25,7 +25,7 @@ int main () {
   q.submit([&] (sycl::handler &h ) {
   sycl::stream out(1024, 128, h ) ;
 
-  h.parallel_for(N, [=](auto i) {
+  h.parallel_for(sycl::range<1>(N), [=](auto i) {
        int ii = i.get_id() ;
        WireCell::SyclArray::array_xf a_d_k(a_s) ;
 
