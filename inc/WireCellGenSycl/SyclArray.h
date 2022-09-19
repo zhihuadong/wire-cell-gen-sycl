@@ -12,6 +12,7 @@
 #include <typeinfo>
 
 //using namespace sycl ;
+using namespace cl ;
 namespace WireCell {
 
     namespace SyclArray {
@@ -48,14 +49,17 @@ namespace WireCell {
 		    void reset(){
 			    auto q = GenSycl::SyclEnv::get_queue();  
 			    sycl::free(a_.ptr, q) ; 
+			    q.wait();
 			    a_.ptr=NULL ; 
 			    a_.sz=0 ;
 		    }; 
 		    Array1D ( size_t N , bool init = true ) {
 			auto q = GenSycl::SyclEnv::get_queue() ;
 			a_.ptr = sycl::malloc_device<T> ( N, q ) ;   
+			q.wait();
 			if(init) {
 		            q.memset(a_.ptr, 0 , N*sizeof(T) )  ;
+			    q.wait() ;
 			}	
 			a_.sz = N ;
 		    }
@@ -99,6 +103,7 @@ namespace WireCell {
 		    void resize( size_t i ) { 
 			    auto q = GenSycl::SyclEnv::get_queue() ;
 			    T* ptr1 = sycl::malloc_device<T> ( i , q) ;
+			    q.wait();
 			    size_t j = a_.sz > i ?  i : a_.sz ;
 			    q.memcpy(ptr1, a_.ptr , j * sizeof (T) ).wait() ;
 			    if ( j > a_.sz ) q_memset(ptr1+a_.sz, 0 , (j-a_.sz) * sizeof(T) ) ;  
@@ -141,8 +146,9 @@ namespace WireCell {
 		    Array2D ( size_t N , size_t M , bool init = true ) {
 			auto q = GenSycl::SyclEnv::get_queue() ;
 			ptr_ = sycl::malloc_device<T> ( N*M, q ) ;   
+			q.wait();
 			if(init) {
-		            q.memset(ptr_, 0 , N*M*sizeof(T)) ;
+		            q.memset(ptr_, 0 , N*M*sizeof(T)).wait() ;
 			}	
 			sz1_ = N ; 
 			sz2_ = M ;
@@ -155,6 +161,7 @@ namespace WireCell {
 		    void alloc(size_t N, size_t M) {
 			auto q = GenSycl::SyclEnv::get_queue() ;
 			    ptr_ = sycl::malloc_device<T> ( N*M, q ) ;
+			    q.wait();
 			    sz1_ = N ;
 			    sz2_ = M ;
 		    }
@@ -183,6 +190,7 @@ namespace WireCell {
 		    T*  to_host()  {
 			auto q = GenSycl::SyclEnv::get_queue() ;
 			    T* ret = (T*) malloc( sizeof(T) * sz1_*sz2_) ;
+			    q.wait();
 			    q.memcpy( ret, ptr_,  sz1_*sz2_ * sizeof(T) ).wait() ;
 			    return ret ;
 		    }
@@ -199,10 +207,11 @@ namespace WireCell {
 		    void resize( size_t i, size_t j, T value ) { 
 			auto q = GenSycl::SyclEnv::get_queue() ;
 			    T* ptr1 = sycl::malloc_device<T> ( i*j  , q) ;
+			    q.wait();
 			    auto sz1 = sz1_ ;
 			    auto sz2 = sz2_ ;
 			    auto ptr = ptr_ ;
-			    q.parallel_for( {i , j} , [=] ( auto item ) {
+			    q.parallel_for( sycl::range<2>(i , j) , [=] ( auto item ) {
 			        auto ii = item.get_id(0) ;
 			        auto jj = item.get_id(1) ;
 		                ptr1[ii + jj * i ] = (ii < sz1 && jj <sz2)   ? ptr[ ii + jj*sz1 ] :  value ;
@@ -415,7 +424,7 @@ namespace WireCell {
             return ss.str();
         }
 
-    }  // namespace SyclArray
+    }  // namespace KokkosArray
 }  // namespace WireCell
 
 #if defined(SYCL_TARGET_CUDA)

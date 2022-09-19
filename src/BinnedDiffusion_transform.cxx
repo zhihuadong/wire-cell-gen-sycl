@@ -209,6 +209,7 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
     // Kernel for calculate nt and np and offset_bin s for t and p for each gd
     int nsigma = m_nsigma;
     
+    
     //temperary work around , need redesign syclarray without queue, 
     //or they can not be used in kernels
     auto gdata_ptr=gdata.data() ;
@@ -220,20 +221,9 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
     auto tvecs_d_ptr = tvecs_d.data() ;
     auto qweights_d_ptr = qweights_d.data() ;
     auto out_ptr = out.data() ;
-q.wait() ;
-//debug
-    double * a = sycl::malloc_device<double>(10, q) ;
-    double t0_0 =omp_get_wtime() ; 
-    q.parallel_for(sycl::range<1>(10), [=] (auto ii) {
-		    auto i = ii.get_id(0); 
-       a[i]=0.0 ;
-      }).wait() ;
-//end debug
 
-    double t0_1 =omp_get_wtime() ; 
-    std::cout<<"dummy kernel time: "<< t0_1-t0_0 <<std::endl ;
-
-    q.parallel_for(npatches, [=] (auto i) {
+    q.parallel_for(sycl::range<1>(npatches), [=] ( auto item ) {
+	int i =item.get_id(0) ;
         double t_s = gdata_ptr[i].t_ct - gdata_ptr[i].t_sigma * nsigma;
         double t_e = gdata_ptr[i].t_ct + gdata_ptr[i].t_sigma * nsigma;
         int t_ofb = max(int((t_s - tb.minval) / tb.binsize), 0);
@@ -252,7 +242,7 @@ q.wait() ;
    
 
     t1 = omp_get_wtime() ;
-    std::cout<<"SetSample: nt,np :"<<t1-t0_1 <<std::endl ;
+    std::cout<<"SetSample: nt,np :"<<t1-t0 <<std::endl ;
     std::cout<<"npatches= "<<npatches <<std::endl ;
 
     //temperary hold nt*np to scan, can we get rid of it ?
@@ -268,23 +258,26 @@ q.wait() ;
 			   }).wait();
  */
     q.submit( [&] ( sycl::handler &h ) {
-    h.parallel_for(npatches, [=] (auto i ) {
+    h.parallel_for(sycl::range<1>(npatches), [=] (auto item ) {
+			   auto i = item.get_id(0); 
 		           temp[i] =  np_d_ptr[i] * nt_d_ptr[i] ;
 			   if(  i ==0 ) patch_idx_ptr[0]=0 ;
 			   })  ;
     }) ;
     q.wait()  ;
+    
 
     q.parallel_for(sycl::nd_range<1>(n_wg*wg_size, wg_size), [=] (sycl::nd_item<1> item ) {
 			   auto wg = item.get_group() ;
 			   auto p = joint_inclusive_scan(wg, &temp[0], &temp[npatches],&patch_idx_ptr[1], plus<>() )  ;
                           }).wait();
+
     unsigned long result ;
     q.memcpy(&result, &patch_idx_ptr[npatches], sizeof(unsigned long) ) ;
 
 
     sycl::free(temp, q) ; 
-
+    q.wait();
     t0 = omp_get_wtime() ;
     std::cout<<"SetSample: scan :"<<t0-t1 <<std::endl ;
     // debug:
@@ -427,7 +420,7 @@ q.wait() ;
 		int idx_p = p + ii%np ;
 		int idx_t = t + ii/np ;
 		size_t out_idx = idx_p + idx_t *out_d0  ;
-#if defined(SYCL_TARGET_HIP) || defined(SYCL_TARGET_CUDA) 
+//#if defined(SYCL_TARGET_HIP) || defined(SYCL_TARGET_CUDA) 
 		auto out_a1 = sycl::atomic_ref< float, 
 				sycl::memory_order::relaxed, 
 				sycl::memory_scope::device, 
@@ -437,8 +430,8 @@ q.wait() ;
 				sycl::memory_scope::device, 
 				sycl::access::address_space::global_space> ( out_ptr[ out_idx + 1  ]);  
 
-#else
-		auto out_a1 = sycl::ext::oneapi::atomic_ref< float, 
+//#else
+/*		auto out_a1 = sycl::ext::oneapi::atomic_ref< float, 
 				sycl::memory_order::relaxed, 
 				sycl::memory_scope::device, 
 				sycl::access::address_space::global_space> ( out_ptr[out_idx ]);  
@@ -446,7 +439,8 @@ q.wait() ;
 				sycl::memory_order::relaxed, 
 				sycl::memory_scope::device, 
 				sycl::access::address_space::global_space> ( out_ptr[ out_idx + 1  ]);  
-#endif
+//#endif
+*/
 		out_a1.fetch_add((float)(charge*weight) ) ; 
 	        out_a2.fetch_add((float)(charge*(1. - weight) ) ) ; 
 
@@ -698,7 +692,8 @@ void GenSycl::BinnedDiffusion_transform::get_charge_vec(std::vector<std::vector<
     auto tvecs_d_ptr = tvecs_d.data() ;
     auto qweights_d_ptr = qweights_d.data() ;
 
-    q.parallel_for(npatches, [=] (auto i) {
+    q.parallel_for(sycl::range<1>(npatches), [=] (auto item) {
+	auto i = item.get_id(0) ;
         double t_s = gdata_ptr[i].t_ct - gdata_ptr[i].t_sigma * nsigma;
         double t_e = gdata_ptr[i].t_ct + gdata_ptr[i].t_sigma * nsigma;
         int t_ofb = max(int((t_s - tb.minval) / tb.binsize), 0);
@@ -1005,7 +1000,7 @@ void GenSycl::BinnedDiffusion_transform::set_sampling_bat(const unsigned long np
 
   auto q = GenSycl::SyclEnv::get_queue() ;
    
-  int wg_size = 64 ; 
+  int wg_size = 32 ; 
 
  
     auto nt_d_ptr = nt_d.data() ;
@@ -1037,7 +1032,6 @@ void GenSycl::BinnedDiffusion_transform::set_sampling_bat(const unsigned long np
       double charge=gdata_ptr[ip].charge ;
       double charge_abs = abs(charge) ;
 
-      float p_v =0.0 ;
 
       for ( int it = 0 ; it < n_it  ; it ++ ) {
           int ii  = it * wg_size + id  ;
@@ -1051,7 +1045,6 @@ void GenSycl::BinnedDiffusion_transform::set_sampling_bat(const unsigned long np
       gsum = reduce_over_group(wg, lsum , plus<>());  
       double r =charge/gsum ;
      
-
       // normalize to total = charge ;
       for ( int it = 0 ; it < n_it  ; it ++ ) {
           int ii  = it * wg_size + id  ;
@@ -1066,7 +1059,7 @@ void GenSycl::BinnedDiffusion_transform::set_sampling_bat(const unsigned long np
 	  for ( int it = 0 ; it < n_it    ; it ++ ) {
 	      int ii  = it * wg_size + id  ;
 	      if( ii < patch_size ) { 
-	       double p =  (double)p_v/charge ; //normalized to total 1
+	       double p =  (double)patch_d_ptr[ii + p0 ]/charge ; //normalized to total 1
 	       //if( p <0 || p>1.0 ) out<<"sqrt-: "<<ip<<" "<<ii<<" "<<p0<<" "<<ii+p0<<" \n" ;
 	       double q = 1.0-p ;
 	       double mu = n*p ;
@@ -1085,7 +1078,6 @@ void GenSycl::BinnedDiffusion_transform::set_sampling_bat(const unsigned long np
 	      if (ii < patch_size ) patch_d_ptr[ii+p0] *= float(charge/gsum) ;   
           }
       }
-
 
   } ) ;
     } ) ;
