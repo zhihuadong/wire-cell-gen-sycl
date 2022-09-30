@@ -226,13 +226,13 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
 	int i =item.get_id(0) ;
         double t_s = gdata_ptr[i].t_ct - gdata_ptr[i].t_sigma * nsigma;
         double t_e = gdata_ptr[i].t_ct + gdata_ptr[i].t_sigma * nsigma;
-        int t_ofb = max(int((t_s - tb.minval) / tb.binsize), 0);
-        int ntss = min((int((t_e - tb.minval) / tb.binsize)) + 1, tb.nbins) - t_ofb;
+        int t_ofb = sycl::max(int((t_s - tb.minval) / tb.binsize), 0);
+        int ntss = sycl::min((int((t_e - tb.minval) / tb.binsize)) + 1, tb.nbins) - t_ofb;
 
         double p_s = gdata_ptr[i].p_ct - gdata_ptr[i].p_sigma * nsigma;
         double p_e = gdata_ptr[i].p_ct + gdata_ptr[i].p_sigma * nsigma;
-        int p_ofb = max(int((p_s - pb.minval) / pb.binsize), 0);
-        int npss = min((int((p_e - pb.minval) / pb.binsize)) + 1, pb.nbins) - p_ofb;
+        int p_ofb = sycl::max(int((p_s - pb.minval) / pb.binsize), 0);
+        int npss = sycl::min((int((p_e - pb.minval) / pb.binsize)) + 1, pb.nbins) - p_ofb;
 
         nt_d_ptr[i] = ntss;
         np_d_ptr[i] = npss;
@@ -696,13 +696,13 @@ void GenSycl::BinnedDiffusion_transform::get_charge_vec(std::vector<std::vector<
 	auto i = item.get_id(0) ;
         double t_s = gdata_ptr[i].t_ct - gdata_ptr[i].t_sigma * nsigma;
         double t_e = gdata_ptr[i].t_ct + gdata_ptr[i].t_sigma * nsigma;
-        int t_ofb = max(int((t_s - tb.minval) / tb.binsize), 0);
-        int ntss = min((int((t_e - tb.minval) / tb.binsize)) + 1, tb.nbins) - t_ofb;
+        int t_ofb = sycl::max(int((t_s - tb.minval) / tb.binsize), 0);
+        int ntss = sycl::min((int((t_e - tb.minval) / tb.binsize)) + 1, tb.nbins) - t_ofb;
 
         double p_s = gdata_ptr[i].p_ct - gdata_ptr[i].p_sigma * nsigma;
         double p_e = gdata_ptr[i].p_ct + gdata_ptr[i].p_sigma * nsigma;
-        int p_ofb = max(int((p_s - pb.minval) / pb.binsize), 0);
-        int npss = min((int((p_e - pb.minval) / pb.binsize)) + 1, pb.nbins) - p_ofb;
+        int p_ofb = sycl::max(int((p_s - pb.minval) / pb.binsize), 0);
+        int npss = sycl::min((int((p_e - pb.minval) / pb.binsize)) + 1, pb.nbins) - p_ofb;
 
         nt_d_ptr[i] = ntss;
         np_d_ptr[i] = npss;

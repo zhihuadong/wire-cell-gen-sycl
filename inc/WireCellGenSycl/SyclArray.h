@@ -71,7 +71,8 @@ namespace WireCell {
 			    auto ptr = a_.ptr ;
 			    auto size = a_.sz ;
 			    auto q = GenSycl::SyclEnv::get_queue() ;
-			    q.parallel_for( size ,[=] (auto i ) {
+			    q.parallel_for( sycl::range<1>(size) ,[=] (auto ii ) {
+				auto i = ii.get_id(0) ;
 				ptr[i] = value ;  
 			    }).wait() ;
 		    }
@@ -171,7 +172,8 @@ namespace WireCell {
 			auto q = GenSycl::SyclEnv::get_queue() ;
 			    auto ptr = ptr_ ;
 			    auto v = value ;
-			    q.parallel_for( sz1_*sz2_ ,[=] (auto i ) {
+			    q.parallel_for( sycl::range<1>(sz1_*sz2_) ,[=] (auto ii ) {
+				auto i = ii.get_id(0) ;
 				ptr[i] = v ;  
 			    }).wait() ;
 		    }
