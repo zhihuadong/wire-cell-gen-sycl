@@ -20,7 +20,7 @@
 
 #ifdef HAVE_CUDA
 #undef HAVE_CUDA
-#define __CUDA_ARCH__
+#define __CUDA_ARCH__ 1
 #endif
 
 #include <CL/sycl.hpp>

@@ -34,7 +34,7 @@ namespace WireCell {
             cufftDestroy(plan);
 	    auto q = out.get_queue() ;
 	    auto ptr = out.data() ;
-	    q.parallel_for(N0, [=] ( auto i0) { ptr[i0] /= N0 ; } ) ;
+	    q.parallel_for(sycl::range<1>(N0), [=] ( auto i00) { auto i0 = i00.get_id(0) ; ptr[i0] /= N0 ; } ) ;
             return out;
         }
         inline array_xxc dft_rc(const array_xxf& in, int dim = 0)
@@ -167,7 +167,7 @@ namespace WireCell {
                 cufftExecC2C(plan, (cufftComplex*) in.data(), (cufftComplex*) out.data(), CUFFT_INVERSE);
                 cufftDestroy(plan);
 	        //q.parallel_for(N0*N1, [=] ( auto i0) {  ptr[i0] /= N1 ; } ) ;
-	        q.parallel_for(N0*N1, [=] ( auto i0) {  ptr[i0].x /= N1 ; ptr[i0].y /=N1 ; } ) ;
+	        q.parallel_for(sycl::range<1>(N0*N1), [=] ( auto i00) { auto i0 =  i00.get_id(0);  ptr[i0].x /= N1 ; ptr[i0].y /=N1 ; } ) ;
                 //Kokkos::parallel_for(
                   //  Kokkos::MDRangePolicy<Kokkos::Rank<2, Kokkos::Iterate::Left>>({0, 0}, {N0, N1}),
                    // KOKKOS_LAMBDA(const SyclArray::Index& i0, const SyclArray::Index& i1) { out(i0, i1) /= N1; });
@@ -181,7 +181,7 @@ namespace WireCell {
                 cufftExecC2C(plan, (cufftComplex*) in.data(), (cufftComplex*) out.data(), CUFFT_INVERSE);
                 cufftDestroy(plan);
 	        //q.parallel_for(N0*N1, [=] ( auto i0) { ptr[i0] /= N0 ; } ) ;
-	        q.parallel_for(N0*N1, [=] ( auto i0) {  ptr[i0].x /= N0 ; ptr[i0].y /=N0 ; } ) ;
+	        q.parallel_for(sycl::range<1>(N0*N1), [=] ( auto i00) {  auto i0 =  i00.get_id(0);  ptr[i0].x /= N0 ; ptr[i0].y /=N0 ; } ) ;
             //    Kokkos::parallel_for(
               //      Kokkos::MDRangePolicy<Kokkos::Rank<2, Kokkos::Iterate::Left>>({0, 0}, {N0, N1}),
                //     KOKKOS_LAMBDA(const SyclArray::Index& i0, const SyclArray::Index& i1) { out(i0, i1) /= N0; });
@@ -206,7 +206,7 @@ namespace WireCell {
                 cufftDestroy(plan);
 		auto ptr = out.data() ;
 	        //q.parallel_for(N0*N1, [=] ( auto i0) { ptr[i0] /= N1 ; } ) ;
-	        q.parallel_for(N0*N1, [=] ( auto i0) {  ptr[i0].x /= N1 ; ptr[i0].y /=N1 ; } ) ;
+	        q.parallel_for(sycl::range<1>(N0*N1), [=] ( auto i00) {  auto i0 =  i00.get_id(0);  ptr[i0].x /= N1 ; ptr[i0].y /=N1 ; } ) ;
                 //Kokkos::parallel_for(
                 //    Kokkos::MDRangePolicy<Kokkos::Rank<2, Kokkos::Iterate::Left>>({0, 0}, {N0, N1}),
                 //    KOKKOS_LAMBDA(const SyclArray::Index& i0, const SyclArray::Index& i1) { out(i0, i1) /= N1; });
@@ -221,7 +221,7 @@ namespace WireCell {
                 cufftDestroy(plan);
 		auto ptr = out.data() ;
 	        //q.parallel_for(N0*N1, [=] ( auto i0) { ptr[i0] /= N0 ; } ) ;
-	        q.parallel_for(N0*N1, [=] ( auto i0) {  ptr[i0].x /= N0 ; ptr[i0].y /=N0 ; } ) ;
+	        q.parallel_for(sycl::range<1>(N0*N1), [=] ( auto i00) {  auto i0 =  i00.get_id(0); ptr[i0].x /= N0 ; ptr[i0].y /=N0 ; } ) ;
                 //Kokkos::parallel_for(
                 //    Kokkos::MDRangePolicy<Kokkos::Rank<2, Kokkos::Iterate::Left>>({0, 0}, {N0, N1}),
                 //    KOKKOS_LAMBDA(const SyclArray::Index& i0, const SyclArray::Index& i1) { out(i0, i1) /= N0; });
@@ -246,7 +246,7 @@ namespace WireCell {
                 cufftExecC2R(plan, (cufftComplex*) in.data(), (cufftReal*) out.data());
                 cufftDestroy(plan);
 		auto ptr = out.data() ;
-	    	q.parallel_for(N0*N1, [=] ( auto i0) { ptr[i0] /= N1 ; } ) ;
+	    	q.parallel_for(sycl::range<1>(N0*N1), [=] ( auto i00) {  auto i0 =  i00.get_id(0); ptr[i0] /= N1 ; } ) ;
             //    Kokkos::parallel_for(
             //        Kokkos::MDRangePolicy<Kokkos::Rank<2, Kokkos::Iterate::Left>>({0, 0}, {N0, N1}),
             //        KOKKOS_LAMBDA(const SyclArray::Index& i0, const SyclArray::Index& i1) { out(i0, i1) /= N1; });
@@ -260,7 +260,7 @@ namespace WireCell {
                 cufftExecC2R(plan, (cufftComplex*) in.data(), (cufftReal*) out.data());
                 cufftDestroy(plan);
 		auto ptr = out.data() ;
-	    	q.parallel_for(N0*N1, [=] ( auto i0) { ptr[i0] /= N0 ; } ) ;
+	    	q.parallel_for(sycl::range<1>(N0*N1), [=] ( auto i00) {  auto i0 =  i00.get_id(0);  ptr[i0] /= N0 ; } ) ;
              //   Kokkos::parallel_for(
              //       Kokkos::MDRangePolicy<Kokkos::Rank<2, Kokkos::Iterate::Left>>({0, 0}, {N0, N1}),
              //       KOKKOS_LAMBDA(const SyclArray::Index& i0, const SyclArray::Index& i1) { out(i0, i1) /= N0; });
@@ -285,7 +285,7 @@ namespace WireCell {
                 cufftPlanMany(&plan, 1, n, inembed, (int) N0, 1, onembed, (int) N0, 1, CUFFT_C2R, (int) N0);
                 cufftExecC2R(plan, (cufftComplex*) in.data(), (cufftReal*) out.data());
                 cufftDestroy(plan);
-	    	q.parallel_for(N0*N1, [=] ( auto i0) { ptr[i0] /= N1 ; } ) ;
+	    	q.parallel_for(sycl::range<1>(N0*N1), [=] ( auto i00) {  auto i0 =  i00.get_id(0); ptr[i0] /= N1 ; } ) ;
             }
 
             if (dim == 1) {
@@ -295,7 +295,7 @@ namespace WireCell {
                 cufftPlanMany(&plan, 1, n, inembed, 1, (int) N0, onembed, 1, (int) N0, CUFFT_C2R, (int) N1);
                 cufftExecC2R(plan, (cufftComplex*) in.data(), (cufftReal*) out.data());
                 cufftDestroy(plan);
-	    	q.parallel_for(N0*N1, [=] ( auto i0) { ptr[i0] /= N0 ; } ) ;
+	    	q.parallel_for(sycl::range<1>(N0*N1), [=] ( auto i00) {  auto i0 =  i00.get_id(0); ptr[i0] /= N0 ; } ) ;
             }
 
         }
