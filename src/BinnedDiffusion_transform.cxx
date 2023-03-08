@@ -420,7 +420,7 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
 		int idx_p = p + ii%np ;
 		int idx_t = t + ii/np ;
 		size_t out_idx = idx_p + idx_t *out_d0  ;
-//#if defined(SYCL_TARGET_HIP) || defined(SYCL_TARGET_CUDA) 
+#if defined(SYCL_TARGET_HIP) || defined(SYCL_TARGET_CUDA) 
 		auto out_a1 = sycl::atomic_ref< float, 
 				sycl::memory_order::relaxed, 
 				sycl::memory_scope::device, 
@@ -430,8 +430,8 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
 				sycl::memory_scope::device, 
 				sycl::access::address_space::global_space> ( out_ptr[ out_idx + 1  ]);  
 
-//#else
-/*		auto out_a1 = sycl::ext::oneapi::atomic_ref< float, 
+#else
+		auto out_a1 = sycl::ext::oneapi::atomic_ref< float, 
 				sycl::memory_order::relaxed, 
 				sycl::memory_scope::device, 
 				sycl::access::address_space::global_space> ( out_ptr[out_idx ]);  
@@ -439,8 +439,8 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
 				sycl::memory_order::relaxed, 
 				sycl::memory_scope::device, 
 				sycl::access::address_space::global_space> ( out_ptr[ out_idx + 1  ]);  
-//#endif
-*/
+#endif
+
 		out_a1.fetch_add((float)(charge*weight) ) ; 
 	        out_a2.fetch_add((float)(charge*(1. - weight) ) ) ; 
 
