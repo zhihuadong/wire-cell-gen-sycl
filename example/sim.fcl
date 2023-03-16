@@ -19,6 +19,7 @@ physics :{
             loglevels: ["debug"]
 
             plugins: ["WireCellPgraph","WireCellGen", "WireCellGenSycl", "WireCellSio","WireCellRoot","WireCellLarsoft","WireCellTbb",'WireCellImg',"WireCellHio" ]
+            #plugins: ["WireCellPgraph","WireCellGen", "WireCellGenSycl", "WireCellSio","WireCellRoot","WireCellLarsoft","WireCellTbb",'WireCellImg' ]
 
             # needs to be found via your WIRECELL_PATH 
             configs: ["sim.jsonnet"]

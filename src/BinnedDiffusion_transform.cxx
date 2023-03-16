@@ -3,7 +3,8 @@
 #include "WireCellUtil/Units.h"
 
 #include <iostream>             // debug
-#include <omp.h>
+//#include <omp.h>
+#include <chrono>
 #include <unordered_map>
 #include <cmath>
 #include <typeinfo>
@@ -43,6 +44,7 @@
 
 
 using namespace std;
+using namespace std::chrono;
 
 using namespace WireCell;
 
@@ -152,8 +154,15 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
 {
 
     auto q = GenSycl::SyclEnv::get_queue() ;
-    double wstart=0.0, wend = 0.0 , t0, t1 ;
-    wstart = omp_get_wtime();
+    std::cout << "Running on: "
+              << q.get_device().get_info<sycl::info::device::name>()
+              << std::endl;
+
+
+    double wstart=0.0, wend = 0.0 , t0 = 0.0 , t1 = 0.0 ;
+    ////wstart = omp_get_wtime();
+    auto wstart_c = high_resolution_clock::now();
+
     const auto ib = m_pimpos.impact_binning();
 
     // set the size of gd  1DArrayand create allocate host memory
@@ -199,8 +208,9 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
     db_vt qweights_d(npatches * MAX_P_SIZE,false);
     
     
-    t0 = omp_get_wtime() ;
-    std::cout<<"SetSample: View creation:"<<t0-wstart <<std::endl ;
+    //// t0 = omp_get_wtime() ;
+    auto t0_c = high_resolution_clock::now();
+    std::cout<<"SetSample: View creation:"<<duration_cast<microseconds>(t0_c - wstart_c).count()/1000000.0 <<std::endl ;
 
     // create host array , because it will be needed on host temperarily.
     // patch_v_h is delayed until we know the size (nt np)
@@ -241,8 +251,9 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
     }).wait();
    
 
-    t1 = omp_get_wtime() ;
-    std::cout<<"SetSample: nt,np :"<<t1-t0 <<std::endl ;
+    //t1 = omp_get_wtime() ;
+    auto t1_c = high_resolution_clock::now();
+    std::cout<<"SetSample: nt,np :"<<duration_cast<microseconds>(t1_c-t0_c).count()/1000000.0 <<std::endl ;
     std::cout<<"npatches= "<<npatches <<std::endl ;
 
     //temperary hold nt*np to scan, can we get rid of it ?
@@ -278,8 +289,9 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
 
     sycl::free(temp, q) ; 
     q.wait();
-    t0 = omp_get_wtime() ;
-    std::cout<<"SetSample: scan :"<<t0-t1 <<std::endl ;
+    ////t0 = omp_get_wtime() ;
+    t0_c = high_resolution_clock::now() ;
+    std::cout<<"SetSample: scan :"<<duration_cast<microseconds>(t0_c-t1_c).count()/1000000.0 <<std::endl ;
     // debug:
     std::cout << "total patch size: " << result << " WeightStrat: " << m_calcstrat << std::endl;
     // Allocate space for patches on device
@@ -299,8 +311,9 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
     generator_enum gen_type = generator_enum::philox;
     omp_get_rng_normal_double(normals_ptr, size, 0.0f, 1.0f, seed, gen_type);
 
-    t1 = omp_get_wtime() ;
-    std::cout<<"SetSample: rand :"<<t1-t0 <<std::endl ;
+    ////t1 = omp_get_wtime() ;
+    t1_c = high_resolution_clock::now() ;
+    std::cout<<"SetSample: rand :"<<duration_cast<microseconds>(t1_c-t0_c).count()/1000000.0 <<std::endl ;
     // decide weight calculation
     int weightstrat = m_calcstrat;
 
@@ -377,26 +390,20 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
     });
     q.wait() ;
 
-    t0 = omp_get_wtime() ;
-    std::cout<<"SetSample: Pvec,Tvec,Weight :"<<t0-t1 <<std::endl ;
+    ////t0 = omp_get_wtime() ;
+    t0_c = high_resolution_clock::now() ;
+    std::cout<<"SetSample: Pvec,Tvec,Weight :"<<duration_cast<microseconds>(t0_c-t1_c).count()/1000000.0 <<std::endl ;
     set_sampling_bat( npatches, nt_d,  np_d,  patch_idx, pvecs_d , tvecs_d, patch_d, normals,gdata  ) ;
     // std::cout << "patch_d: " << typeid(patch_d).name() << std::endl;
     // std::cout << "patch_idx: " << typeid(patch_idx).name() << std::endl;
-    wend = omp_get_wtime();
-    g_get_charge_vec_time_part4 += wend-wstart ;
-    std::cout<<"SetSample: SetSamplingBatch :"<<wend-t0 <<std::endl ;
-    std::cout <<"set_sampling_Time: "<< wend-wstart <<std::endl;
+   //// wend = omp_get_wtime();
+    auto wend_c = high_resolution_clock::now() ;
+    g_get_charge_vec_time_part4 += duration_cast<microseconds>(wend_c-wstart_c).count()/1000000.0 ;
+    std::cout<<"SetSample: SetSamplingBatch :"<<duration_cast<microseconds>(wend_c-t0_c).count()/1000000.0 <<std::endl ;
+    std::cout <<"set_sampling_Time: "<< duration_cast<microseconds>(wend_c-wstart_c).count()/1000000.0 <<std::endl;
     
-    wstart = omp_get_wtime();
-    // cout << "pr21 get_charge_matrix_kokkos(): set_sampling_bat() no DtoH time " << wstart - wend << endl;
-    // std::cout << "yuhw: DEBUG: npatches: " << npatches << std::endl;
-    // std::cout << "yuhw: DEBUG: np_d: " << KokkosArray::dump_1d_view(np_d,10000) << std::endl;
-    // std::cout << "yuhw: DEBUG: nt_d: " << KokkosArray::dump_1d_view(nt_d,10000) << std::endl;
-    // std::cout << "yuhw: DEBUG: offsets_d: " << KokkosArray::dump_1d_view(offsets_d,10000) << std::endl;
-    // std::cout << "yuhw: DEBUG: patch_idx: " << KokkosArray::dump_1d_view(patch_idx,10000) << std::endl;
-    // std::cout << "yuhw: DEBUG: patch_d: " << KokkosArray::dump_1d_view(patch_d,10000) << std::endl;
-    // std::cout << "yuhw: DEBUG: qweights_d: " << KokkosArray::dump_1d_view(qweights_d,10000) << std::endl;
-
+    ////wstart = omp_get_wtime();
+    wstart_c = high_resolution_clock::now() ;
 
     // Scatter Add kernel 
     wg_size = 32 ;
@@ -452,7 +459,8 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
     q.wait();
 
 
-    wend = omp_get_wtime();
+    ////wend = omp_get_wtime();
+    wend_c = high_resolution_clock::now() ;
     //free the memory
     //why do it in destructor fail ?
     
@@ -467,13 +475,14 @@ void GenSycl::BinnedDiffusion_transform::get_charge_matrix_sycl(SyclArray::array
     normals.reset()  ;
     
 
-    t0 = omp_get_wtime();
+    ////t0 = omp_get_wtime();
+    t0_c = high_resolution_clock::now() ;
 
      //std::cout << "yuhw: box_of_one: " << SyclArray::dump_2d_view(out,20) << std::endl;
     // std::cout << "yuhw: DEBUG: out: " << SyclArray::dump_2d_view(out,10000) << std::endl;
-    g_get_charge_vec_time_part3 += wend - wstart;
-    cout<<"ScatterAdd_Time : "<<wend-wstart << endl ; 
-    cout<<"reset Time : "<<t0-wend << endl ; 
+    g_get_charge_vec_time_part3 += duration_cast<microseconds>(wend_c - wstart_c).count()/1000000.0;
+    cout<<"ScatterAdd_Time : "<<duration_cast<microseconds>(wend_c-wstart_c).count()/1000000.0 << endl ; 
+    cout<<"reset Time : "<<duration_cast<microseconds>(t0_c-wend_c).count()/1000000.0 << endl ; 
     cout << "get_charge_matrix_sycl(): Total_ScatterAdd_Time : " << g_get_charge_vec_time_part3 << endl;
     cout << "get_charge_matrix_sycl(): Total_set_sampling_Time : " << g_get_charge_vec_time_part4<< endl ;
     cout << "get_charge_matrix_sycl() : m_fluctuate : " << m_fluctuate << endl;

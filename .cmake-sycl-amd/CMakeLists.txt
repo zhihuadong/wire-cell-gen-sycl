@@ -19,7 +19,8 @@ set(Boost_USE_MULTITHREADED ON)
 
 
 #string(APPEND CMAKE_CXX_FLAGS "-g -O3 -fopenmp -pedantic -Wall -fsycl -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend --offload-arch=gfx906")
-string(APPEND CMAKE_CXX_FLAGS "-g -O3 -fopenmp -pedantic -Wall -fsycl $ENV{SYCL_CLANG_EXTRA_FLAGS}")
+#string(APPEND CMAKE_CXX_FLAGS "-g -O3 -fopenmp -pedantic -Wall -fsycl $ENV{SYCL_CLANG_EXTRA_FLAGS}")
+string(APPEND CMAKE_CXX_FLAGS " -g -O3  -pedantic -Wall -fsycl $ENV{SYCL_CLANG_EXTRA_FLAGS}")
 string(APPEND CMAKE_SHARED_LINKER_FLAGS "-Wl,--no-undefined")
 
 add_library(WireCellGenSycl SHARED ${all_files})

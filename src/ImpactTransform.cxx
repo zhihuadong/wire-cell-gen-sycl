@@ -5,12 +5,14 @@
 #include "WireCellGenSycl/SyclArray.h"
 
 #include <iostream>  // debugging.
-#include <omp.h>
+////#include <omp.h>
+#include <chrono>
 
 double g_get_charge_vec_time = 0.0;
 double g_fft_time = 0.0;
 
 using namespace std;
+using namespace std::chrono;
 
 using namespace WireCell;
 GenSycl::ImpactTransform::ImpactTransform(IPlaneImpactResponse::pointer pir, BinnedDiffusion_transform& bd)
@@ -21,7 +23,7 @@ GenSycl::ImpactTransform::ImpactTransform(IPlaneImpactResponse::pointer pir, Bin
 
 bool GenSycl::ImpactTransform::transform_vector()
 {
-//    double timer_transform = omp_get_wtime();
+    //double timer_transform = omp_get_wtime();
     // arrange the field response (210 in total, pitch_range/impact)
     // number of wires nwires ...
     m_num_group = std::round(m_pir->pitch() / m_pir->impact()) + 1;  // 11
@@ -296,7 +298,9 @@ bool GenSycl::ImpactTransform::transform_vector()
 
 bool GenSycl::ImpactTransform::transform_matrix()
 {
-    double timer_transform = omp_get_wtime();
+    ////double timer_transform = omp_get_wtime();
+    auto start = high_resolution_clock::now();
+    double timer_transform = 0.0;
     double td0(0.0), td1(.0)   ;
     // arrange the field response (210 in total, pitch_range/impact)
     // number of wires nwires ...
@@ -341,16 +345,22 @@ bool GenSycl::ImpactTransform::transform_matrix()
 
     // now work on the charge part ...
     // trying to sampling ...
-    double wstart = omp_get_wtime();
-    td0 += wstart-timer_transform ;
+    ////double wstart = omp_get_wtime();
+    auto wstart_c = high_resolution_clock::now();
+    double wstart = 0.0 ;
+
+    td0 += duration_cast<microseconds>(wstart_c-start).count()/1000000.0 ;
     SyclArray::array_xxf f_data = SyclArray::Zero<SyclArray::array_xxf>(end_pitch - start_pitch, m_end_tick - m_start_tick);;
     m_bd.get_charge_matrix_sycl(f_data, m_vec_impact, start_pitch, m_start_tick);
-    double wend = omp_get_wtime();
-    td1 += wend-wstart ;
-    g_get_charge_vec_time += wend - wstart;
+    ////double wend = omp_get_wtime();
+    double wend = 0.0;
+    auto wend_c = high_resolution_clock::now();
+    auto td1_c = duration_cast<microseconds>(wend_c -wstart_c).count()/1000000.0 ;
+    td1 += td1_c;
+    g_get_charge_vec_time += td1_c;
     log->debug("ImpactTransform::ImpactTransform() : get_charge_matrix() Total_Time :  {}", g_get_charge_vec_time);
 
-    wstart = omp_get_wtime();
+    /////wstart = omp_get_wtime();
     SyclArray::array_xxc acc_data_f_w(end_ch - start_ch + 2 * npad_wire, m_end_tick - m_start_tick);
     SyclArray::array_xxf acc_data_t_w = SyclArray::Zero<SyclArray::array_xxf>(end_ch - start_ch + 2 * npad_wire, m_end_tick - m_start_tick);
     log->info("yuhw: pitch   {} {} {} {}",start_pitch, end_pitch, f_data.extent(0), f_data.extent(1));
@@ -485,11 +495,14 @@ bool GenSycl::ImpactTransform::transform_matrix()
     m_decon_data = acc_data_t_w_eigen; // FIXME: reduce this copy
     std::cout << "mdeconn_data: row, colum " << m_decon_data.rows()<<","<<m_decon_data.cols() <<std::endl ;
     
-    double timer_fft = omp_get_wtime() - wstart;
+    ////double timer_fft = omp_get_wtime() - wstart;
+    double timer_fft = duration_cast<microseconds>(high_resolution_clock::now()- wstart_c).count()/1000000.0 ;
+
+
     g_fft_time += timer_fft ;
     std::cout<<"m_decon_data.sum: "<<m_decon_data.rows()<<"," <<m_decon_data.cols()<<",  "<< m_decon_data.sum() <<std::endl ;
     //log->debug("ImpactTransform::transform_matrix: FFT: {}", timer_fft);
-    timer_transform = omp_get_wtime() - timer_transform;
+    timer_transform = duration_cast<microseconds>(high_resolution_clock::now() - start).count()/1000000.0;
     log->debug("ImpactTransform::transform_matrix: Total: {}", timer_transform);
     log->debug("ImpactTransform::transform_matrix: # of channels: {} # of ticks: {}", m_decon_data.rows(), m_decon_data.cols());
     log->debug("ImpactTransform::transform_matrix: m_decon_data.sum(): {}", m_decon_data.sum());

@@ -46,7 +46,8 @@
 #include "WireCellGenSycl/BinnedDiffusion_transform.h"
 #include "WireCellUtil/Units.h"
 #include "WireCellUtil/Point.h"
-#include "omp.h"
+//#include "omp.h"
+#include <chrono>
 
 #include "WireCellGenSycl/SyclEnv.h"
 
@@ -54,6 +55,7 @@ WIRECELL_FACTORY(GenSyclDepoTransform, WireCell::GenSycl::DepoTransform, WireCel
 
 using namespace WireCell;
 using namespace std;
+using namespace std::chrono;
 
 GenSycl::DepoTransform::DepoTransform()
   : m_start_time(0.0 * units::ns)
@@ -147,7 +149,9 @@ WireCell::Configuration GenSycl::DepoTransform::default_configuration() const
 bool GenSycl::DepoTransform::operator()(const input_pointer& in, output_pointer& out)
 {
     double td0(0.0), td1(0.0), td2(0.0), td3(.0), t00 ,t01 ;
-       double   t000 = omp_get_wtime() ;
+       ////double   t000 = omp_get_wtime() ;
+    auto t000_c = high_resolution_clock::now() ;
+       double   t000(0.0) ;
     if (!in) {
         out = nullptr;
         return true;
@@ -155,12 +159,15 @@ bool GenSycl::DepoTransform::operator()(const input_pointer& in, output_pointer&
     
     auto depos = in->depos();
 
-       double   t001 = omp_get_wtime() ;
-       std::cout<<"p000 : " << t001-t000 <<std::endl ;
+       ////double   t001 = omp_get_wtime() ;
+    auto t001_c = high_resolution_clock::now() ;
+       double   t001(0.0)  ;
+       std::cout<<"p000 : " << duration_cast<microseconds>(t001_c-t000_c).count()/1000000.0 <<std::endl ;
     Binning tbins(m_readout_time / m_tick, m_start_time, m_start_time + m_readout_time);
     ITrace::vector traces;
     for (auto face : m_anode->faces()) {
-          t00 = omp_get_wtime() ;
+        ////  t00 = omp_get_wtime() ;
+    auto t00_c = high_resolution_clock::now() ;
         // Select the depos which are in this face's sensitive volume
         IDepo::vector face_depos, dropped_depos;
         auto bb = face->sensitive();
@@ -196,11 +203,14 @@ bool GenSycl::DepoTransform::operator()(const input_pointer& in, output_pointer&
                 dropped_depos.back()->time() / units::ms, ray.first / units::cm, ray.second / units::cm);
         }
 
-          t01 = omp_get_wtime() ;
-	  td3+=t01-t00 ;
+          ////t01 = omp_get_wtime() ;
+        auto t01_c = high_resolution_clock::now() ;
+	  td3+= duration_cast<microseconds>(t01_c-t00_c).count()/1000000.0 ;
         int iplane = -1;
         for (auto plane : face->planes()) {
-		double t0 = omp_get_wtime() ;
+	////	double t0 = omp_get_wtime() ;
+            auto t0_c = high_resolution_clock::now() ;
+		double t0(0.0)  ;
             ++iplane;
 
             const Pimpos* pimpos = plane->pimpos();
@@ -220,8 +230,11 @@ bool GenSycl::DepoTransform::operator()(const input_pointer& in, output_pointer&
             auto pir = m_pirs.at(iplane);
             GenSycl::ImpactTransform transform(pir, bindiff);
 
-            double t1=omp_get_wtime() ;
-	    td0+=t1-t0 ;
+            ////double t1=omp_get_wtime() ;
+            auto t1_c = high_resolution_clock::now() ;
+            double t1(0.0) ;
+	    auto td0_c = duration_cast<microseconds>(t1_c-t0_c).count()/1000000.0 ;
+	    td0+= td0_c;
 	    
 	    std::cout<<"debug DepoTransfer: 0 , "<<m_transform<<std::endl;  
 
@@ -233,10 +246,13 @@ bool GenSycl::DepoTransform::operator()(const input_pointer& in, output_pointer&
                 THROW(ValueError() << errmsg{"No transform function named: " + m_transform});
             }
 
-            double t2=omp_get_wtime() ;
-	    td1 += t2-t1 ;
+            ////double t2=omp_get_wtime() ;
+            auto t2_c = high_resolution_clock::now() ;
+            double t2=0.0 ;
+            double td1_c = duration_cast<microseconds>(t2_c-t1_c).count()/1000000.0 ;
+	    td1 += td1_c ;
             const int nwires = pimpos->region_binning().nbins();
-            std::cout<<"nwires: "<<nwires <<" nsamples: "<<tbins.nbins()<< " p1: " << t1-t0 << " p2: "<< t2-t1<< std::endl ;
+            std::cout<<"nwires: "<<nwires <<" nsamples: "<<tbins.nbins()<< " p1: " << td0_c << " p2: "<< td1_c << std::endl ;
 
 
 	    bool cpflag = m_transform.compare("transform_vector")==0 ;
@@ -262,11 +278,14 @@ bool GenSycl::DepoTransform::operator()(const input_pointer& in, output_pointer&
                 auto trace = make_shared<SimpleTrace>(chid, tbin, charge);
                 traces.push_back(trace);
             }
-             double t3 =omp_get_wtime() ;
-	     td2 += t3-t2 ;
-            std::cout<<"BD_create_Time: "<< "plane " <<iplane <<" " <<t1-t0<< std::endl;
-	    std::cout<<"trasform_maxtrix_Time:  "<< "plane " <<iplane <<" "<<t2-t1<< std::endl ;
-            std::cout<< "nwire_loop_Time: "<<"plane " <<iplane<<" " <<t3-t2<<std::endl ;
+             ////double t3 =omp_get_wtime() ;
+            auto t3_c = high_resolution_clock::now() ;
+             double t3 = 0.0 ;
+            auto td2_c = duration_cast<microseconds>(t3_c-t2_c).count()/1000000.0 ;
+	     td2 += td2_c ;
+            std::cout<<"BD_create_Time: "<< "plane " <<iplane <<" " <<td0_c<< std::endl;
+	    std::cout<<"trasform_maxtrix_Time:  "<< "plane " <<iplane <<" "<<td1_c<< std::endl ;
+            std::cout<< "nwire_loop_Time: "<<"plane " <<iplane<<" " <<td2_c<<std::endl ;
 	    free(wfs_h) ; 
         }
     }
@@ -277,6 +296,7 @@ bool GenSycl::DepoTransform::operator()(const input_pointer& in, output_pointer&
     std::cout<<"Total_transform_maxtrix_Time: "<< td1 <<std::endl ;
     std::cout<<"Total_BD_create_Time: "<< td0 <<std::endl ;
     std::cout<<"Total_nwire_loop_long_resp_Time: "<< td2 <<std::endl ;
-    std::cout<<"Total_DepoTransform::Operator()_Time: "<< omp_get_wtime() - t000 <<std::endl ;
+    ////std::cout<<"Total_DepoTransform::Operator()_Time: "<< omp_get_wtime() - t000 <<std::endl ;
+    std::cout<<"Total_DepoTransform::Operator()_Time: "<< duration_cast<microseconds>(high_resolution_clock::now()  - t000_c).count()/1000000.0 <<std::endl ;
     return true;
 }

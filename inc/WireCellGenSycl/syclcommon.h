@@ -57,13 +57,19 @@ static inline cl::sycl::device GetTargetDevice() {
   } catch (...) {
   }
 #elif defined SYCL_TARGET_DEFAULT
+  std::cout<<"Default"<<std::endl ; 
   dev = cl::sycl::device(cl::sycl::default_selector());
 #elif defined SYCL_TARGET_CPU
+  std::cout<<"cpu"<<std::endl ; 
   dev = cl::sycl::device(cl::sycl::cpu_selector());
 #elif defined SYCL_TARGET_GPU
   dev = cl::sycl::device(cl::sycl::gpu_selector());
+  std::cout<<"gpu"<<std::endl ; 
 #else
-  dev = cl::sycl::device(cl::sycl::host_selector());
+  std::cout<<"host"<<std::endl ; 
+  //dev = cl::sycl::device(cl::sycl::host_selector());
+  //dev = cl::sycl::device(cl::sycl::default_selector());
+  dev = cl::sycl::device(cl::sycl::cpu_selector());
 #endif
 
   return dev;
