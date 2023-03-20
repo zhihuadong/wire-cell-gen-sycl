@@ -63,7 +63,8 @@ static inline cl::sycl::device GetTargetDevice() {
 #elif defined SYCL_TARGET_GPU
   dev = cl::sycl::device(cl::sycl::gpu_selector());
 #else
-  dev = cl::sycl::device(cl::sycl::host_selector());
+  dev = cl::sycl::device(cl::sycl::cpu_selector());
+  //dev = cl::sycl::device(cl::sycl::host_selector());
 #endif
 
   return dev;
