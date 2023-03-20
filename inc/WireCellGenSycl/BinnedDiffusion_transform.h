@@ -3,12 +3,27 @@
 
 #ifdef __CUDA_ARCH__
 #warning "__CUDA_ARCH__"
+#define __CUDA_ARCH__P
 #undef __CUDA_ARCH__
-#include <Eigen/Sparse>
-#define __CUDA_ARCH__
-#else 
-#include <Eigen/Sparse>
 #endif
+
+#ifdef __SYCL_DECIVE_ONLY__
+#warning "__SYCL_DEVICE_ONLY_"
+#define __SYCL_DECIVE_ONLY__P
+#undef __SYCL_DECIVE_ONLY__
+#endif
+
+
+#include <Eigen/Sparse>
+
+
+#ifdef __CUDA_ARCH__P
+#define __CUDA_ARCH__
+#endif
+#ifdef __SYCL_DECIVE_ONLY__P
+#define  __SYCL_DECIVE_ONLY__
+#endif
+
 
 #include "WireCellUtil/Pimpos.h"
 #include "WireCellUtil/Point.h"

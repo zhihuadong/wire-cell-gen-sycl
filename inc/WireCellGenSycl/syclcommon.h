@@ -84,7 +84,8 @@ static inline cl::sycl::context GetSharedContext() {
 #elif defined SYCL_TARGET_GPU
   platform = cl::sycl::platform(cl::sycl::gpu_selector());
 #else
-  platform = cl::sycl::platform(cl::sycl::host_selector());
+  platform = cl::sycl::platform(cl::sycl::cpu_selector());
+  //platform = cl::sycl::platform(cl::sycl::host_selector());
 
 #endif
 
