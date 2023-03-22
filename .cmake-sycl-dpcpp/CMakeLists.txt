@@ -31,7 +31,6 @@ add_library(WireCellGenSycl SHARED ${all_files})
 target_include_directories(WireCellGenSycl
   PRIVATE
     ${PROJECT_SOURCE_DIR}/../inc
-    $ENV{FMT_INC}
     $ENV{FFTW_INC}
     $ENV{OMPRNG}
     $ENV{RANDOM123_INC}
@@ -41,9 +40,13 @@ target_include_directories(WireCellGenSycl
     $ENV{SPDLOG_INC}
     $ENV{WIRECELL_INC}
 )
+#set_target_properties(WireCellGenSycl
+#	PROPERTIES COMPILE_OPTIONS "-D__SYCL_DISABLE_NAMESPACE_INLINE__;-DEIGEN_NO_CUDA;-DEIGEN_DONT_VECTORIZE;-DSPDLOG_SHARED_LIB;-DSPDLOG_COMPILED_LIB;-DSPDLOG_FMT_EXTERNAL")
 set_target_properties(WireCellGenSycl
-	PROPERTIES COMPILE_OPTIONS "-D__SYCL_DISABLE_NAMESPACE_INLINE__;-DEIGEN_NO_CUDA;-DEIGEN_DONT_VECTORIZE;-DSPDLOG_SHARED_LIB;-DSPDLOG_COMPILED_LIB;-DSPDLOG_FMT_EXTERNAL")
-target_link_directories(WireCellGenSycl PRIVATE  $ENV{JSONCPP_LIB} $ENV{WIRECELL_LIB} $ENV{FMT_LIB} $ENV{FFTW_LIB} $ENV{SPDLOG_LIB} )
-target_link_libraries(WireCellGenSycl PRIVATE  jsoncpp WireCellIface WireCellUtil WireCellAux fftw3f fmt spdlog Boost::headers)
+	PROPERTIES COMPILE_OPTIONS "-D__SYCL_DISABLE_NAMESPACE_INLINE__;-DEIGEN_NO_CUDA;-DSPDLOG_SHARED_LIB;-DSPDLOG_COMPILED_LIB")
+#target_link_directories(WireCellGenSycl PRIVATE  $ENV{JSONCPP_LIB} $ENV{WIRECELL_LIB} $ENV{FMT_LIB} $ENV{FFTW_LIB} $ENV{SPDLOG_LIB} )
+#target_link_libraries(WireCellGenSycl PRIVATE  jsoncpp WireCellIface WireCellUtil WireCellAux fftw3f fmt spdlog Boost::headers)
+target_link_directories(WireCellGenSycl PRIVATE  $ENV{JSONCPP_LIB} $ENV{WIRECELL_LIB}  $ENV{FFTW_LIB} $ENV{SPDLOG_LIB} )
+target_link_libraries(WireCellGenSycl PRIVATE  jsoncpp WireCellIface WireCellUtil WireCellAux fftw3f spdlog Boost::headers)
 
 add_subdirectory(test)
