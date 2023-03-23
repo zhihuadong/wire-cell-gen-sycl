@@ -13,6 +13,9 @@ class CUDASelector : public cl::sycl::device_selector {
     const std::string device_vendor = device.get_info<cl::sycl::info::device::vendor>();
     const std::string device_driver =
         device.get_info<cl::sycl::info::device::driver_version>();
+    const std::string device_name =
+        device.get_info<cl::sycl::info::device::name>();
+std::cout<<"Device: "<< device_vendor<<" "<<device_driver<<" " <<device_name<<std::endl ;
 
     if (device.is_gpu() &&
         (device_vendor.find("NVIDIA") != std::string::npos) &&
