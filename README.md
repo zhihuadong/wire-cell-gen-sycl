@@ -37,7 +37,8 @@ export WC_SYCL_SRC_DIR=${PWD}/wire-cell-gen-sycl
 #dependency code RNG wrapper. 
 git clone https://github.com/DEShawResearch/random123.git
 git clone https://github.com/GKNB/test-benchmark-OpenMP-RNG.git omprng
-
+export RANDOM123_INC=${PWD}/random123/include
+export OMGRNG=${PWD}/omprng
 
 ```
 
