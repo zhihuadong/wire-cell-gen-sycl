@@ -57,12 +57,12 @@ export JSONNET_INC=${JSONNET_DIR}/include
 
 ### build host (cpu backend)
 ```bash
-cmake -B ${WC_BUILD_DIR} $SC_SYCL_SRC_DIR/.cmake-sycl-dpcpp
+cmake -B ${WC_BUILD_DIR} -DCMAKE_CXX_COMPILER=icpx $SC_SYCL_SRC_DIR/.cmake-sycl-dpcpp
 make -C ${WC_BUILD_DIR} -j 10
 ```
 ### build for Nvidia GPU backend
 ```bash
-cmake -B ${WC_BUILD_DIR} $SC_SYCL_SRC_DIR/.cmake-sycl
+cmake -B ${WC_BUILD_DIR} -DCMAKE_CXX_COMPILER=$(which clang++) $SC_SYCL_SRC_DIR/.cmake-sycl
 make -C ${WC_BUILD_DIR} -j 10
 ```
 
@@ -71,7 +71,7 @@ make -C ${WC_BUILD_DIR} -j 10
 export HIP_DIR=/opt/rocm/hip
 #specify local amd GPU arch
 export SYCL_CLANG_EXTRA_FLAGS=" -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend --offload-arch=gfx906 "
-cmake -B ${WC_BUILD_DIR} $SC_SYCL_SRC_DIR/.cmake-sycl-amd
+cmake -B ${WC_BUILD_DIR} -DCMAKE_CXX_COMPILER=$(which clang++)  $SC_SYCL_SRC_DIR/.cmake-sycl-amd
 make -C ${WC_BUILD_DIR} -j 10
 ```
 ## test running 
