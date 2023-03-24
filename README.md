@@ -1,24 +1,77 @@
-# SYCL version of the wire-cell-gen
+# SYCL version of the wire-cell-gen Standardalone verison
+
+
 
 ## prerequisites
- - Need to have access to a `Wire-Cell Toolkit` build and its dependencies.
-   Following variable need to be definned: 
-   WIRECELL_LIB EIGEN_INC JSONNET_INC JSONCPP_INC WIRECELL_INC 
+ - Need to build Wire-Cell-toolkit   and its dependencies.
+   Best use spack.
+```bash
+git clone -c feature.manyFiles=true https://github.com/spack/spack.git
+. spack/share/spack/setup-env.sh
+which spack
+git clone https://github.com/WireCell/wire-cell-spack.git wct-spack
+spack repo add wct-spack
+#use your own os, here we use ubuntu20.04 as example
+#by default spack will detect your OS and CPU 
+#But to avoid a issue of inconsistant arch from different compilers we choose x86_64   
+spack install wire-cell-toolkit arch=linux-ubuntu20.04-x86_64
 
- - Need to have sycl compiler installed  https://codeplay.com/solutions/oneapi/for-cuda/#getting-started
- - Need to have oneMKL Open Source Interface Library installed https://github.com/oneapi-src/oneMKL 
+```
+   
 
+     
+ - Need to have sycl compiler installed :
+   Suggest install oneAPI basekit for cpu backend .
+   for Nvidia and AMD GPU
+   Please download and install plugins from 
+   https://codeplay.com/solutions/oneapi
 
+ - CUDA and ROCM (include hipfft) need to be installed on system for GPU backend
 
+### Download code
 ```bash
 git clone https://github.com/WireCell/wire-cell-gen-sycl.git 
+git checkout wc20
 export WC_BUILD_DIR=/your/build/directory
 export WC_SYCL_SRC_DIR=${PWD}/wire-cell-gen-sycl
+#dependency code RNG wrapper. 
+git clone https://github.com/DEShawResearch/random123.git
+git clone https://github.com/GKNB/test-benchmark-OpenMP-RNG.git omprng
+
+
+```
+
+### build 
+
+### setup enviroments:
+```bash
+spack load wire-cell-toolkit
+export WIRECELL_DIR=$(spack find -p wire-cell-toolkit |grep wire |awk '{print $2}'
+export WIRECELL_INC=${WIRECELL_DIR}/include
+export WIRECELL_LIB=${WIRECELL_DIR}/lib
+export JSONNET_DIR=$(spack find -p go-jsonnet |grep go-jsonnet|awk '{print $2}'
+export JSONNET_INC=${JSONNET_DIR}/include
+```
+
+
+### build host (cpu backend)
+```bash
+cmake -B ${WC_BUILD_DIR} $SC_SYCL_SRC_DIR/.cmake-sycl-dpcpp
+make -C ${WC_BUILD_DIR} -j 10
+```
+### build for Nvidia GPU backend
+```bash
 cmake -B ${WC_BUILD_DIR} $SC_SYCL_SRC_DIR/.cmake-sycl
 make -C ${WC_BUILD_DIR} -j 10
 ```
 
-## full test running `wire-cell` as plugin of `LArSoft`
+### build for AMD GPU backend
+```bash
+export HIP_DIR=/opt/rocm/hip
+cmake -B ${WC_BUILD_DIR} $SC_SYCL_SRC_DIR/.cmake-sycl
+make -C ${WC_BUILD_DIR} -j 10
+```
+## test running 
 
 
 ### download `wire-cell-data`
@@ -29,21 +82,29 @@ make -C ${WC_BUILD_DIR} -j 10
 git clone https://github.com/WireCell/wire-cell-data.git
 ```
 
-### $WIRECELL_PATH
+### downlaod `wire-cell-toolkit`
+We need the config files there.
+```
+ git clone https://github.com/WireCell/wire-cell-toolkit.git
+```
+
+ 
+
+### setup `$WIRECELL_PATH`
 
 `wire-cell` searches pathes in this env var for configuration and data files.
 
 for bash, run something like this below:
 
 ```
-export WIRECELL_PATH=$WIRECELL_FQ_DIR/wirecell-0.14.0/cfg # main cfg
+export WIRECELL_PATH=$WCT_SRC/cfg #  main CFG
 export WIRECELL_PATH=$WIRECELL_DATA_PATH:$WIRECELL_PATH # data
 export WIRECELL_PATH=$WC_SYCL_SRC/cfg:$WIRECELL_PATH # gen-sycl
 
 
 ```
 Variable meaning:
- - `$WIRECELL_FQ_DIR` is a variable defined developing in Kyle's container or `setup wirecell` in a Fermilab ups system, current version is `0.14.0`, may upgrade in the future.
+ - `$WCT_SRC` is a `wire-cell-toolkit` source file directory
  - `WIRECELL_DATA_PATH` refer to the git repository cloned from the previous step
  - `WC_SYCL_SRC` refer to the  path of the `wire-cell-gen-sycl` standalone SRC.
 
@@ -53,9 +114,18 @@ Variable meaning:
 export LD_LIBRARY_PATH=${WC_BUILD_DIR}:$LD_LIBRARY_PATH
 ```
 
+### Download sample input file:
+e.g.   
+```
+https://www.phy.bnl.gov/~yuhw/kokkos/sample/wire-cell-sio/pdsp/cosmic-500/1/depos.tar.bz2
+```
 
 ### run
-
- - input: a root file (refered to as [`g4.root`](https://github.com/hep-cce2/PPSwork/blob/master/Wire-Cell/examples/g4.root) below) containing Geant4 energy depo (`sim::SimEnergyDeposits`)
- - in the example folder: `lar -n 1 -c sim.fcl g4.root`
+Use the `wct-sim.jsonnet` in  sample directory 
+```
+wire-cell -l stdout -L debug \
+-V input="depos.tar.bz2" \
+-V output="frames.tar.bz2" \
+-c wct-sim.jsonnet
+```
 
