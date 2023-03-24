@@ -68,7 +68,9 @@ make -C ${WC_BUILD_DIR} -j 10
 ### build for AMD GPU backend
 ```bash
 export HIP_DIR=/opt/rocm/hip
-cmake -B ${WC_BUILD_DIR} $SC_SYCL_SRC_DIR/.cmake-sycl
+#specify local amd GPU arch
+export SYCL_CLANG_EXTRA_FLAGS=" -fsycl-targets=amdgcn-amd-amdhsa -Xsycl-target-backend --offload-arch=gfx906 "
+cmake -B ${WC_BUILD_DIR} $SC_SYCL_SRC_DIR/.cmake-sycl-amd
 make -C ${WC_BUILD_DIR} -j 10
 ```
 ## test running 
