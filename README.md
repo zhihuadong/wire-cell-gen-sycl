@@ -30,13 +30,14 @@ spack install wire-cell-toolkit arch=linux-ubuntu20.04-x86_64
 
 ### Download code
 ```bash
-git clone https://github.com/WireCell/wire-cell-gen-sycl.git 
+git clone https://github.com/zhihuadong/wire-cell-gen-sycl.git 
 git checkout wc20
 export WC_BUILD_DIR=/your/build/directory
 export WC_SYCL_SRC_DIR=${PWD}/wire-cell-gen-sycl
 #dependency code RNG wrapper. 
 git clone https://github.com/DEShawResearch/random123.git
-git clone https://github.com/GKNB/test-benchmark-OpenMP-RNG.git omprng
+git clone https://github.com/zhihua/test-benchmark-OpenMP-RNG.git omprng
+git checkout chrono
 export RANDOM123_INC=${PWD}/random123/include
 export OMGRNG=${PWD}/omprng
 
@@ -50,12 +51,22 @@ spack load wire-cell-toolkit
 export WIRECELL_DIR=$(spack find -p wire-cell-toolkit |grep wire |awk '{print $2}'
 export WIRECELL_INC=${WIRECELL_DIR}/include
 export WIRECELL_LIB=${WIRECELL_DIR}/lib
+##dependes of OS , above could be 
+#export WIRECELL_LIB=${WIRECELL_DIR}/lib64
+
 export JSONNET_DIR=$(spack find -p go-jsonnet |grep go-jsonnet|awk '{print $2}'
 export JSONNET_INC=${JSONNET_DIR}/include
 ```
+If you install wire-cell-toolkit not using spack, make sure the cmake/pkg configure files for dependencies can be found by cmake.
 
 
+Assume use intel oneapi2023.0.0 with codeplay plugin for Nvidia/AMD gpu
+e.g :  compiler setup via 
+```
+. ${ONEAPI_INSTALL_LOCATION}/setupvars.sh --include-intel-llvm 
+```
 ### build host (cpu backend)
+
 ```bash
 cmake -B ${WC_BUILD_DIR} -DCMAKE_CXX_COMPILER=icpx $SC_SYCL_SRC_DIR/.cmake-sycl-dpcpp
 make -C ${WC_BUILD_DIR} -j 10
