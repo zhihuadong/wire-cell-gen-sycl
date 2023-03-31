@@ -61,7 +61,8 @@ If you install wire-cell-toolkit not using spack, make sure the cmake/pkg config
 
 
 Assume use intel oneapi2023.0.0 with codeplay plugin for Nvidia/AMD gpu
-e.g :  compiler setup via 
+
+compiler setup via 
 ```
 . ${ONEAPI_INSTALL_LOCATION}/setupvars.sh --include-intel-llvm 
 ```
